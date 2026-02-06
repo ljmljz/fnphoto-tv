@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0a0a0c"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:focusable="false"
+            android:text="fnPhoto TV"
+            android:textColor="#3b82f6"
+            android:textSize="42sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:focusable="false"
+            android:text="Connect to your Fly-N NAS"
+            android:textColor="#9ca3af"
+            android:textSize="18sp" />
+
+        <EditText
+            android:id="@+id/edit_nas_url"
+            android:layout_width="550dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@android:drawable/edit_text"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:hint="NAS URL (e.g., http://192.168.1.100:8080)"
+            android:inputType="textUri"
+            android:nextFocusDown="@+id/edit_username"
+            android:padding="14dp"
+            android:textSize="17sp">
+            <requestFocus />
+        </EditText>
+
+        <EditText
+            android:id="@+id/edit_username"
+            android:layout_width="550dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@android:drawable/edit_text"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:hint="Username"
+            android:inputType="text"
+            android:nextFocusUp="@+id/edit_nas_url"
+            android:nextFocusDown="@+id/edit_api_token"
+            android:padding="14dp"
+            android:textSize="17sp" />
+
+        <EditText
+            android:id="@+id/edit_api_token"
+            android:layout_width="550dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:background="@android:drawable/edit_text"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:nextFocusUp="@+id/edit_username"
+            android:nextFocusDown="@+id/btn_login"
+            android:padding="14dp"
+            android:textSize="17sp" />
+
+        <Button
+            android:id="@+id/btn_login"
+            android:layout_width="550dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="#3b82f6"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusUp="@+id/edit_api_token"
+            android:padding="14dp"
+            android:text="Connect and Login"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</ScrollView>

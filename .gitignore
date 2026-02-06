@@ -1,0 +1,31 @@
+# Android/Gradle - Build outputs and cache
+.gradle/
+build/
+*/build/
+local.properties
+# gradle.properties - May contain sensitive info like API keys
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCode
+.opencode/
+AGENTS.md
+
+# Keystore files (security)
+*.jks
+*.keystore
+
+# Test outputs
+/app/src/test/resources/test-output/
