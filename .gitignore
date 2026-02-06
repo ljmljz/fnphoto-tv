@@ -1,0 +1,31 @@
+# Android/Gradle
+.gradle/
+build/
+*/build/
+local.properties
+gradle.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCode
+.opencode/
+AGENTS.md
+
+# Keystore files (security)
+*.jks
+*.keystore
+
+# Test outputs
+/app/src/test/resources/test-output/
