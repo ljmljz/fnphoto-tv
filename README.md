@@ -21,7 +21,7 @@ An Android TV application for browsing photos and videos from Feiniu NAS (fnOS) 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/fnPhoto.git
+git clone https://github.com/ljmljz/fnphoto-tv.git
 cd fnPhoto
 ```
 
