@@ -2,6 +2,7 @@ package com.fnphoto.tv;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,10 +14,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.fragment.app.FragmentActivity;
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.model.GlideUrl;
-import com.bumptech.glide.load.model.LazyHeaders;
-import com.fnphoto.tv.api.FnAuthUtils;
+import com.fnphoto.tv.cache.CachedImageLoader;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.ui.PlayerView;
 import java.util.ArrayList;
@@ -101,20 +99,22 @@ public class MediaDetailActivity extends FragmentActivity {
             SharedPreferences prefs = getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
             String token = prefs.getString("api_token", "");
 
-            // 从 URL 中提取 path
-            String path = mediaUrl.replaceFirst("^https?://[^/]+", "");
-            // 生成 authx
-            String authx = FnAuthUtils.generateAuthX(path, "GET", null);
+            // 使用带缓存的加载器
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getResources().getDisplayMetrics().heightPixels;
 
-            // 构建带认证头的 GlideUrl
-            GlideUrl glideUrl = new GlideUrl(mediaUrl, new LazyHeaders.Builder()
-                    .addHeader("accesstoken", token)
-                    .addHeader("authx", authx)
-                    .build());
+            CachedImageLoader.loadImage(this, mediaUrl, token, screenWidth, screenHeight,
+                    new CachedImageLoader.ImageLoadCallback() {
+                        @Override
+                        public void onBitmapLoaded(Bitmap bitmap) {
+                            imageView.setImageBitmap(bitmap);
+                        }
 
-            Glide.with(this)
-                    .load(glideUrl)
-                    .into(imageView);
+                        @Override
+                        public void onLoadFailed() {
+                            Toast.makeText(MediaDetailActivity.this, "图片加载失败", Toast.LENGTH_SHORT).show();
+                        }
+                    });
         }
 
         // 点击退出

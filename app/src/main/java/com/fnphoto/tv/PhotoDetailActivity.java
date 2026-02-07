@@ -2,14 +2,15 @@ package com.fnphoto.tv;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.Toast;
 import androidx.fragment.app.FragmentActivity;
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.model.GlideUrl;
-import com.bumptech.glide.load.model.LazyHeaders;
+
+import com.fnphoto.tv.cache.CachedImageLoader;
 
 public class PhotoDetailActivity extends FragmentActivity {
 
@@ -33,18 +34,26 @@ public class PhotoDetailActivity extends FragmentActivity {
         String title = getIntent().getStringExtra("PHOTO_TITLE");
 
         if (photoUrl != null && !photoUrl.isEmpty()) {
-            // 获取 token 和生成 authx
+            // 获取 token
             SharedPreferences prefs = getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
             String token = prefs.getString("api_token", "");
 
-            // 构建带认证头的 GlideUrl
-            GlideUrl glideUrl = new GlideUrl(photoUrl, new LazyHeaders.Builder()
-                    .addHeader("accesstoken", token)
-                    .build());
-
-            Glide.with(this)
-                    .load(glideUrl)
-                    .into(imageView);
+            // 使用带缓存的加载器加载原图
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getResources().getDisplayMetrics().heightPixels;
+            
+            CachedImageLoader.loadImage(this, photoUrl, token, screenWidth, screenHeight,
+                    new CachedImageLoader.ImageLoadCallback() {
+                        @Override
+                        public void onBitmapLoaded(Bitmap bitmap) {
+                            imageView.setImageBitmap(bitmap);
+                        }
+                        
+                        @Override
+                        public void onLoadFailed() {
+                            Toast.makeText(PhotoDetailActivity.this, "图片加载失败", Toast.LENGTH_SHORT).show();
+                        }
+                    });
         }
 
         // 点击退出

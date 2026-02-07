@@ -21,11 +21,11 @@ import androidx.leanback.widget.Presenter;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.LazyHeaders;
-import com.bumptech.glide.request.target.SimpleTarget;
-import com.bumptech.glide.request.transition.Transition;
+import com.fnphoto.tv.cache.CachedImageLoader;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CardPresenter extends Presenter {
     private static final String TAG = "CardPresenter";
@@ -77,9 +77,8 @@ public class CardPresenter extends Presenter {
         ImageCardView cardView = (ImageCardView) viewHolder.view;
 
         cardView.setTitleText(mediaItem.getTitle());
-
+        
         // 存储当前item的ID，用于检查视图是否已被重用
-        Log.d(TAG, "onBindViewHolder - item id: " + mediaItem.getId() + ", type: " + mediaItem.getType());
         cardView.setTag(R.id.media_item_id, mediaItem.getId());
 
         if ("date".equals(mediaItem.getType())) {
@@ -98,14 +97,15 @@ public class CardPresenter extends Presenter {
     }
 
     private void loadPreviewImages(ImageCardView cardView, List<String> urls, String itemId) {
-        Log.d(TAG, "loadPreviewImages called with " + urls.size() + " urls, itemId: " + itemId);
         Context context = cardView.getContext();
         SharedPreferences prefs = context.getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
         String token = prefs.getString("api_token", "");
         
         int count = Math.min(urls.size(), MAX_PREVIEW);
-        Log.d(TAG, "Loading " + count + " preview images");
-        PreviewLoader loader = new PreviewLoader(cardView, itemId, count, DATE_CARD_WIDTH, DATE_CARD_HEIGHT);
+        Bitmap[] bitmaps = new Bitmap[count];
+        AtomicInteger loadedCount = new AtomicInteger(0);
+        
+        Log.d(TAG, "Loading " + count + " preview images with cache support");
         
         for (int i = 0; i < count; i++) {
             String url = urls.get(i);
@@ -115,213 +115,144 @@ public class CardPresenter extends Presenter {
             
             final int index = i;
             
-            GlideUrl glideUrl = new GlideUrl(url, new LazyHeaders.Builder()
-                    .addHeader("accesstoken", token)
-                    .build());
-            
-            Glide.with(context)
-                    .asBitmap()
-                    .load(glideUrl)
-                    .override(150, 150)
-                    .into(new SimpleTarget<Bitmap>() {
+            // 使用带缓存的加载器
+            CachedImageLoader.loadImage(context, url, token, 150, 150, 
+                    new CachedImageLoader.ImageLoadCallback() {
                         @Override
-                        public void onResourceReady(Bitmap resource, Transition<? super Bitmap> transition) {
-                            loader.onBitmapLoaded(index, resource);
+                        public void onBitmapLoaded(Bitmap bitmap) {
+                            bitmaps[index] = bitmap;
+                            int current = loadedCount.incrementAndGet();
+                            Log.d(TAG, "Preview loaded " + current + "/" + count + " for " + itemId);
+                            
+                            if (current >= count) {
+                                // 所有图片加载完成，检查视图是否可用
+                                String currentId = (String) cardView.getTag(R.id.media_item_id);
+                                if (itemId.equals(currentId)) {
+                                    Bitmap composite = createCompositeBitmap(bitmaps, DATE_CARD_WIDTH, DATE_CARD_HEIGHT);
+                                    cardView.setMainImage(new BitmapDrawable(context.getResources(), composite));
+                                    Log.d(TAG, "Composite image set for " + itemId);
+                                }
+                            }
                         }
                         
                         @Override
-                        public void onLoadFailed(Drawable errorDrawable) {
-                            loader.onBitmapFailed(index);
+                        public void onLoadFailed() {
+                            int current = loadedCount.incrementAndGet();
+                            Log.w(TAG, "Preview load failed " + current + "/" + count + " for " + itemId);
+                            
+                            if (current >= count) {
+                                String currentId = (String) cardView.getTag(R.id.media_item_id);
+                                if (itemId.equals(currentId)) {
+                                    Bitmap composite = createCompositeBitmap(bitmaps, DATE_CARD_WIDTH, DATE_CARD_HEIGHT);
+                                    cardView.setMainImage(new BitmapDrawable(context.getResources(), composite));
+                                }
+                            }
                         }
                     });
         }
     }
 
-    // 内部类：管理单个卡片的预览图加载
-    private static class PreviewLoader {
-        private ImageCardView cardView;
-        private String expectedId;
-        private int totalCount;
-        private int loadedCount = 0;
-        private Bitmap[] bitmaps;
-        private int width;
-        private int height;
-
-        PreviewLoader(ImageCardView cardView, String expectedId, int count, int width, int height) {
-            this.cardView = cardView;
-            this.expectedId = expectedId;
-            this.totalCount = count;
-            this.width = width;
-            this.height = height;
-            this.bitmaps = new Bitmap[count];
-        }
-
-        void onBitmapLoaded(int index, Bitmap bitmap) {
-            if (index >= 0 && index < bitmaps.length) {
-                bitmaps[index] = bitmap;
-            }
-            checkComplete();
-        }
-
-        void onBitmapFailed(int index) {
-            checkComplete();
-        }
-
-        private void checkComplete() {
-            loadedCount++;
-            Log.d(TAG, "PreviewLoader checkComplete: " + loadedCount + "/" + totalCount);
-            if (loadedCount >= totalCount) {
-                // 检查视图是否还是原来的那个
-                String currentId = (String) cardView.getTag(R.id.media_item_id);
-                Log.d(TAG, "PreviewLoader - expectedId: " + expectedId + ", currentId: " + currentId);
-                
-                // 显示图片的条件：
-                // 1. currentId 和 expectedId 匹配
-                // 2. 两者都为 null（视图刚创建）
-                boolean shouldShowImage = false;
-                if (currentId != null && currentId.equals(expectedId)) {
-                    shouldShowImage = true;
-                } else if (currentId == null && expectedId == null) {
-                    // 两者都为null，视图可能是新的
-                    shouldShowImage = true;
-                } else if (currentId == null && expectedId != null) {
-                    // currentId为null但expectedId不为null，可能是Tag还没设置
-                    // 这种情况也可以尝试显示
-                    shouldShowImage = true;
-                }
-                
-                if (shouldShowImage) {
-                    Bitmap composite = createCompositeBitmap(bitmaps, width, height);
-                    cardView.setMainImage(new BitmapDrawable(cardView.getResources(), composite));
-                    Log.d(TAG, "PreviewLoader - composite image set successfully");
-                } else {
-                    Log.w(TAG, "PreviewLoader - view reused (different id), skipping image set. Expected: " + expectedId + ", Current: " + currentId);
-                }
+    private Bitmap createCompositeBitmap(Bitmap[] bitmaps, int width, int height) {
+        Bitmap composite = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(composite);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setFilterBitmap(true);
+        
+        canvas.drawColor(Color.parseColor("#22000000"));
+        
+        // 计算有效bitmap数量
+        List<Bitmap> validBitmaps = new ArrayList<>();
+        for (Bitmap b : bitmaps) {
+            if (b != null && !b.isRecycled()) {
+                validBitmaps.add(b);
             }
         }
-
-        private Bitmap createCompositeBitmap(Bitmap[] bitmaps, int width, int height) {
-            Bitmap composite = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(composite);
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setFilterBitmap(true);
-            
-            canvas.drawColor(Color.parseColor("#22000000"));
-            
-            // 计算有效bitmap数量
-            int validCount = 0;
-            for (Bitmap b : bitmaps) {
-                if (b != null && !b.isRecycled()) validCount++;
-            }
-            
-            if (validCount == 0) return composite;
-            
-            // 按顺序绘制
-            int idx = 0;
-            if (validCount == 1) {
-                for (int i = 0; i < bitmaps.length; i++) {
-                    if (bitmaps[i] != null && !bitmaps[i].isRecycled()) {
-                        drawBitmap(canvas, bitmaps[i], 0, 0, width, height, paint);
-                        break;
-                    }
-                }
-            } else if (validCount == 2) {
-                int halfWidth = (width - PADDING) / 2;
-                int drawn = 0;
-                for (int i = 0; i < bitmaps.length && drawn < 2; i++) {
-                    if (bitmaps[i] != null && !bitmaps[i].isRecycled()) {
-                        if (drawn == 0) {
-                            drawBitmap(canvas, bitmaps[i], 0, 0, halfWidth, height, paint);
-                        } else {
-                            drawBitmap(canvas, bitmaps[i], halfWidth + PADDING, 0, width - halfWidth - PADDING, height, paint);
-                        }
-                        drawn++;
-                    }
-                }
-            } else if (validCount == 3) {
-                int halfWidth = (width - PADDING) / 2;
-                int halfHeight = (height - PADDING) / 2;
-                int drawn = 0;
-                for (int i = 0; i < bitmaps.length && drawn < 3; i++) {
-                    if (bitmaps[i] != null && !bitmaps[i].isRecycled()) {
-                        if (drawn == 0) {
-                            drawBitmap(canvas, bitmaps[i], 0, 0, halfWidth, height, paint);
-                        } else if (drawn == 1) {
-                            drawBitmap(canvas, bitmaps[i], halfWidth + PADDING, 0, width - halfWidth - PADDING, halfHeight, paint);
-                        } else {
-                            drawBitmap(canvas, bitmaps[i], halfWidth + PADDING, halfHeight + PADDING, width - halfWidth - PADDING, height - halfHeight - PADDING, paint);
-                        }
-                        drawn++;
-                    }
-                }
-            } else {
-                int halfWidth = (width - PADDING) / 2;
-                int halfHeight = (height - PADDING) / 2;
-                int drawn = 0;
-                for (int i = 0; i < bitmaps.length && drawn < 4; i++) {
-                    if (bitmaps[i] != null && !bitmaps[i].isRecycled()) {
-                        if (drawn == 0) {
-                            drawBitmap(canvas, bitmaps[i], 0, 0, halfWidth, halfHeight, paint);
-                        } else if (drawn == 1) {
-                            drawBitmap(canvas, bitmaps[i], halfWidth + PADDING, 0, width - halfWidth - PADDING, halfHeight, paint);
-                        } else if (drawn == 2) {
-                            drawBitmap(canvas, bitmaps[i], 0, halfHeight + PADDING, halfWidth, height - halfHeight - PADDING, paint);
-                        } else {
-                            drawBitmap(canvas, bitmaps[i], halfWidth + PADDING, halfHeight + PADDING, width - halfWidth - PADDING, height - halfHeight - PADDING, paint);
-                        }
-                        drawn++;
-                    }
-                }
-            }
-            
+        
+        if (validBitmaps.isEmpty()) {
             return composite;
         }
 
-        private void drawBitmap(Canvas canvas, Bitmap bitmap, float left, float top, float right, float bottom, Paint paint) {
-            int bitmapWidth = bitmap.getWidth();
-            int bitmapHeight = bitmap.getHeight();
-            float targetWidth = right - left;
-            float targetHeight = bottom - top;
-            
-            float scale = Math.max(targetWidth / bitmapWidth, targetHeight / bitmapHeight);
-            
-            float srcLeft = Math.max(0, (bitmapWidth - targetWidth / scale) / 2);
-            float srcTop = Math.max(0, (bitmapHeight - targetHeight / scale) / 2);
-            float srcRight = Math.min(bitmapWidth, srcLeft + targetWidth / scale);
-            float srcBottom = Math.min(bitmapHeight, srcTop + targetHeight / scale);
-            
-            Rect srcRect = new Rect((int) srcLeft, (int) srcTop, (int) srcRight, (int) srcBottom);
-            Rect dstRect = new Rect((int) left, (int) top, (int) right, (int) bottom);
-            
-            canvas.drawBitmap(bitmap, srcRect, dstRect, paint);
+        int count = validBitmaps.size();
+
+        if (count == 1) {
+            drawBitmap(canvas, validBitmaps.get(0), 0, 0, width, height, paint);
+        } else if (count == 2) {
+            int halfWidth = (width - PADDING) / 2;
+            // 左半部分
+            drawBitmap(canvas, validBitmaps.get(0), 0, 0, halfWidth, height, paint);
+            // 右半部分：从 halfWidth+PADDING 开始，到 width 结束
+            drawBitmap(canvas, validBitmaps.get(1), halfWidth + PADDING, 0, width, height, paint);
+        } else if (count == 3) {
+            int halfWidth = (width - PADDING) / 2;
+            int halfHeight = (height - PADDING) / 2;
+            // 左边大图
+            drawBitmap(canvas, validBitmaps.get(0), 0, 0, halfWidth, height, paint);
+            // 右上：从 y=0 到 y=halfHeight
+            drawBitmap(canvas, validBitmaps.get(1), halfWidth + PADDING, 0, width, halfHeight, paint);
+            // 右下：从 y=halfHeight+PADDING 到 y=height
+            drawBitmap(canvas, validBitmaps.get(2), halfWidth + PADDING, halfHeight + PADDING, width, height, paint);
+        } else {
+            int halfWidth = (width - PADDING) / 2;
+            int halfHeight = (height - PADDING) / 2;
+            // 左上
+            drawBitmap(canvas, validBitmaps.get(0), 0, 0, halfWidth, halfHeight, paint);
+            // 右上
+            drawBitmap(canvas, validBitmaps.get(1), halfWidth + PADDING, 0, width, halfHeight, paint);
+            // 左下：从 y=halfHeight+PADDING 到 y=height
+            drawBitmap(canvas, validBitmaps.get(2), 0, halfHeight + PADDING, halfWidth, height, paint);
+            // 右下
+            drawBitmap(canvas, validBitmaps.get(3), halfWidth + PADDING, halfHeight + PADDING, width, height, paint);
         }
+        
+        return composite;
+    }
+
+    private void drawBitmap(Canvas canvas, Bitmap bitmap, float left, float top, float right, float bottom, Paint paint) {
+        int bitmapWidth = bitmap.getWidth();
+        int bitmapHeight = bitmap.getHeight();
+        float targetWidth = right - left;
+        float targetHeight = bottom - top;
+        
+        float scale = Math.max(targetWidth / bitmapWidth, targetHeight / bitmapHeight);
+        
+        float srcLeft = Math.max(0, (bitmapWidth - targetWidth / scale) / 2);
+        float srcTop = Math.max(0, (bitmapHeight - targetHeight / scale) / 2);
+        float srcRight = Math.min(bitmapWidth, srcLeft + targetWidth / scale);
+        float srcBottom = Math.min(bitmapHeight, srcTop + targetHeight / scale);
+        
+        Rect srcRect = new Rect((int) srcLeft, (int) srcTop, (int) srcRight, (int) srcBottom);
+        Rect dstRect = new Rect((int) left, (int) top, (int) right, (int) bottom);
+        
+        canvas.drawBitmap(bitmap, srcRect, dstRect, paint);
     }
 
     private Drawable createPlaceholderDrawable(Context context) {
         Bitmap bitmap = Bitmap.createBitmap(DATE_CARD_WIDTH, DATE_CARD_HEIGHT, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         canvas.drawColor(Color.parseColor("#33000000"));
+
+        // Don't draw the lines for seperate
+//        Paint paint = new Paint();
+//        paint.setColor(Color.parseColor("#55FFFFFF"));
+//        paint.setStrokeWidth(2);
+//
+//        canvas.drawLine(DATE_CARD_WIDTH/2, 0, DATE_CARD_WIDTH/2, DATE_CARD_HEIGHT, paint);
+//        canvas.drawLine(0, DATE_CARD_HEIGHT/2, DATE_CARD_WIDTH, DATE_CARD_HEIGHT/2, paint);
         
         return new BitmapDrawable(context.getResources(), bitmap);
     }
 
     private void loadSingleImage(ImageCardView cardView, MediaItem mediaItem) {
+        Context context = cardView.getContext();
+        SharedPreferences prefs = context.getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
+        String token = prefs.getString("api_token", "");
+        
         String imageUrl = mediaItem.getThumbnailUrl() != null ?
                 mediaItem.getThumbnailUrl() : mediaItem.getMediaUrl();
 
         if (imageUrl != null && !imageUrl.isEmpty()) {
-            Context context = cardView.getContext();
-            SharedPreferences prefs = context.getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
-            String token = prefs.getString("api_token", "");
-
-            GlideUrl glideUrl = new GlideUrl(imageUrl, new LazyHeaders.Builder()
-                    .addHeader("accesstoken", token)
-                    .build());
-
-            Glide.with(context)
-                    .load(glideUrl)
-                    .centerCrop()
-                    .into(cardView.getMainImageView());
+            // 使用带缓存的加载
+            CachedImageLoader.loadIntoImageView(cardView.getMainImageView(), imageUrl, token);
         } else {
             Drawable drawable = ContextCompat.getDrawable(cardView.getContext(),
                     android.R.drawable.ic_menu_gallery);
