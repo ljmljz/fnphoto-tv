@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="160dp"
+    android:layout_height="160dp"
+    android:background="@drawable/date_item_normal"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:padding="4dp">
+
+    <com.fnphoto.tv.PreviewGridView
+        android:id="@+id/preview_grid"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:id="@+id/date_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:background="#80000000"
+        android:padding="4dp" />
+
+</FrameLayout>

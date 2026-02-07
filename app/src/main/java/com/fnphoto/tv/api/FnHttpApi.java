@@ -356,6 +356,7 @@ public interface FnHttpApi {
         public int month;
         public int day;
         public int itemCount;
+        public List<String> previewThumbs; // 预览缩略图URL列表（前4个）
     }
     
     // 时间范围请求
