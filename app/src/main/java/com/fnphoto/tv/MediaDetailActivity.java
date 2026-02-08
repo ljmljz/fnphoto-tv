@@ -47,6 +47,7 @@ public class MediaDetailActivity extends FragmentActivity {
     private Handler debounceHandler = new Handler(Looper.getMainLooper());
     private boolean canSwitch = true;
     private boolean isVideoPlaying = false;
+    private MediaItem currentVideoItem; // 当前视频项，用于遥控器播放控制
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +89,7 @@ public class MediaDetailActivity extends FragmentActivity {
         
         // 重置视频播放状态
         isVideoPlaying = false;
+        currentVideoItem = null; // 重置当前视频项
 
         // 清除之前的视图
         container.removeAllViews();
@@ -148,6 +150,9 @@ public class MediaDetailActivity extends FragmentActivity {
      * 显示视频预览图和播放按钮
      */
     private void showVideoPreview(MediaItem item) {
+        // 保存当前视频项，用于遥控器控制
+        currentVideoItem = item;
+        
         // 使用 thumbnail 的 mUrl 作为预览图
         String previewUrl = item.getThumbnailUrl();
         
@@ -227,7 +232,7 @@ public class MediaDetailActivity extends FragmentActivity {
         canvas.drawRect(0, 0, width, height, paint);
         
         // 计算播放按钮尺寸
-        int playButtonRadius = Math.min(width, height) / 12;
+        int playButtonRadius = Math.min(width, height) / 16;
         int centerX = width / 2;
         int centerY = height / 2;
         
@@ -255,6 +260,7 @@ public class MediaDetailActivity extends FragmentActivity {
      */
     private void startVideoPlayback(com.fnphoto.tv.MediaItem item) {
         isVideoPlaying = true;
+        currentVideoItem = item; // 保存当前视频项
 
         // 清除预览图
         container.removeAllViews();
@@ -344,8 +350,31 @@ public class MediaDetailActivity extends FragmentActivity {
             case KeyEvent.KEYCODE_BACK:
                 finish();
                 return true;
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                handleOkKey();
+                return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * 处理确定键（OK键）事件
+     * - 在预览状态：开始播放视频
+     * - 在播放状态：暂停/继续播放
+     */
+    private void handleOkKey() {
+        if (player != null && isVideoPlaying) {
+            // 已在播放状态，切换暂停/播放
+            boolean isPlaying = player.getPlayWhenReady();
+            player.setPlayWhenReady(!isPlaying);
+            String message = isPlaying ? "已暂停" : "继续播放";
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        } else if (currentVideoItem != null && !isVideoPlaying) {
+            // 在预览状态，开始播放
+            startVideoPlayback(currentVideoItem);
+        }
     }
 
     @Override
