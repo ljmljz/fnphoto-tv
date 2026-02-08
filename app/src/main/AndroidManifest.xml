@@ -12,6 +12,7 @@
         android:required="false" />
 
     <application
+        android:name=".FnPhotoApplication"
         android:allowBackup="true"
         android:icon="@drawable/app_icon"
         android:label="fnPhoto TV"

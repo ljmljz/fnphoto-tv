@@ -23,9 +23,13 @@ import androidx.fragment.app.FragmentActivity;
 
 import com.fnphoto.tv.cache.CachedImageLoader;
 import com.fnphoto.tv.player.AuthenticatedHttpDataSourceFactory;
+import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.util.Util;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -270,22 +274,33 @@ public class MediaDetailActivity extends FragmentActivity {
 
         Log.d(TAG, "Playing video: " + videoUrl);
 
+        // 初始化播放器 (ExoPlayer 2.11.8 适配 API 19)
+        player = new SimpleExoPlayer.Builder(this).build();
+        playerView.setPlayer(player);
+
         // 创建带认证的 DataSource Factory
         AuthenticatedHttpDataSourceFactory dataSourceFactory =
                 new AuthenticatedHttpDataSourceFactory(this, "ExoPlayer");
 
-        // 初始化播放器 (ExoPlayer 2.14.2)
-        player = new SimpleExoPlayer.Builder(this)
-                .setMediaSourceFactory(new ProgressiveMediaSource.Factory(dataSourceFactory))
-                .build();
-        playerView.setPlayer(player);
+        // 添加错误监听器，自动处理播放错误
+        player.addListener(new Player.EventListener() {
+            @Override
+            public void onPlayerError(com.google.android.exoplayer2.ExoPlaybackException error) {
+                Log.e(TAG, "Player error: " + error.getMessage(), error);
+                // 显示错误提示但不崩溃
+                android.widget.Toast.makeText(MediaDetailActivity.this,
+                        "视频播放失败，请尝试在其他设备上播放",
+                        android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
 
-        // 创建 MediaItem 并播放
-        com.google.android.exoplayer2.MediaItem mediaItem = 
-                com.google.android.exoplayer2.MediaItem.fromUri(videoUrl);
-        player.setMediaItem(mediaItem);
-        player.prepare();
-        player.play();
+        // 创建 MediaSource 并播放 (ExoPlayer 2.11.8 API)
+        // 使用 Uri 直接创建 MediaSource
+        android.net.Uri uri = android.net.Uri.parse(videoUrl);
+        ProgressiveMediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(uri);
+        player.prepare(mediaSource);
+        player.setPlayWhenReady(true);
     }
 
     private void switchToPrevious() {

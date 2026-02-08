@@ -8,7 +8,7 @@ import okio.ByteString;
 import org.json.JSONObject;
 
 public class FnWebSocketManager {
-    private final OkHttpClient client;
+    private OkHttpClient client;
     private WebSocket mainWs;
     private WebSocket fileWs;
     private WebSocket timerWs;
@@ -21,7 +21,14 @@ public class FnWebSocketManager {
     }
 
     public FnWebSocketManager() {
-        this.client = new OkHttpClient();
+        // 延迟初始化 OkHttpClient，捕获可能的异常
+        try {
+            this.client = new OkHttpClient();
+            android.util.Log.d("FnWebSocketManager", "OkHttpClient initialized successfully");
+        } catch (Exception e) {
+            android.util.Log.e("FnWebSocketManager", "Failed to initialize OkHttpClient: " + e.getMessage(), e);
+            throw e;
+        }
     }
 
     public void connect(String baseUrl, String token, WsCallback callback) {

@@ -6,10 +6,21 @@ import org.json.JSONObject;
 import java.security.SecureRandom;
 
 public class FnWebSocketClient {
-    private OkHttpClient client = new OkHttpClient();
+    private OkHttpClient client;
     private WebSocket mainWs;
     private String serverUrl;
     private String currentSi;
+    
+    public FnWebSocketClient() {
+        // 延迟初始化 OkHttpClient，捕获可能的异常
+        try {
+            this.client = new OkHttpClient();
+            android.util.Log.d("FnWebSocket", "OkHttpClient initialized successfully");
+        } catch (Exception e) {
+            android.util.Log.e("FnWebSocket", "Failed to initialize OkHttpClient: " + e.getMessage(), e);
+            throw e;
+        }
+    }
     
     public interface LoginCallback {
         void onSuccess(JSONObject response);
@@ -17,6 +28,8 @@ public class FnWebSocketClient {
     }
 
     public void startLogin(String url, String username, String password, LoginCallback callback) {
+        android.util.Log.d("FnWebSocket", "startLogin called with url: " + url);
+        
         // Ensure URL format is correct for WebSocket
         if (url.startsWith("http://")) {
             this.serverUrl = url.replace("http://", "ws://");
@@ -29,9 +42,11 @@ public class FnWebSocketClient {
         
         android.util.Log.d("FnWebSocket", "Connecting to: " + serverUrl);
         
-        Request request = new Request.Builder().url(serverUrl).build();
-        
-        mainWs = client.newWebSocket(request, new WebSocketListener() {
+        try {
+            Request request = new Request.Builder().url(serverUrl).build();
+            android.util.Log.d("FnWebSocket", "Request created successfully");
+            
+            mainWs = client.newWebSocket(request, new WebSocketListener() {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
                 android.util.Log.d("FnWebSocket", "Connection opened, requesting RSA key");
@@ -102,6 +117,11 @@ public class FnWebSocketClient {
                 android.util.Log.w("FnWebSocket", "Closed: " + code + " - " + reason);
             }
         });
+            android.util.Log.d("FnWebSocket", "WebSocket created successfully");
+        } catch (Exception e) {
+            android.util.Log.e("FnWebSocket", "Failed to create WebSocket: " + e.getMessage(), e);
+            callback.onError("Failed to create WebSocket: " + e.getMessage());
+        }
     }
 
     private void requestRsaKey(WebSocket ws) {

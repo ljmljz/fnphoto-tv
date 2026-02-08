@@ -43,6 +43,8 @@
             android:inputType="textUri"
             android:nextFocusDown="@+id/edit_username"
             android:padding="14dp"
+            android:textColor="@android:color/black"
+            android:textColorHint="?android:attr/textColorHintInverse"
             android:textSize="17sp">
 
             <requestFocus />
@@ -61,6 +63,8 @@
             android:nextFocusUp="@+id/edit_nas_url"
             android:nextFocusDown="@+id/edit_api_token"
             android:padding="14dp"
+            android:textColor="@android:color/black"
+            android:textColorHint="?android:attr/textColorHintInverse"
             android:textSize="17sp" />
 
         <EditText
@@ -76,6 +80,8 @@
             android:nextFocusUp="@+id/edit_username"
             android:nextFocusDown="@+id/btn_login"
             android:padding="14dp"
+            android:textColor="@android:color/black"
+            android:textColorHint="?android:attr/textColorHintInverse"
             android:textSize="17sp" />
 
         <Button

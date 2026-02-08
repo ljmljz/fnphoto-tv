@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * 自定义 HttpDataSource 工厂，用于添加飞牛相册的认证头
- * 适配 ExoPlayer API 2.14.2
+ * 适配 ExoPlayer API 2.11.8 (支持 API 19)
  */
 public class AuthenticatedHttpDataSourceFactory implements DataSource.Factory {
 
@@ -30,28 +30,37 @@ public class AuthenticatedHttpDataSourceFactory implements DataSource.Factory {
 
     @Override
     public DataSource createDataSource() {
-        // 创建 HttpDataSource.Factory 来生产带认证的 DataSource
-        HttpDataSource.Factory httpDataSourceFactory = new HttpDataSource.Factory() {
+        // 创建 HttpDataSource 工厂 - 必须实现所有 5 个方法
+        HttpDataSource.Factory httpFactory = new HttpDataSource.Factory() {
             @Override
             public HttpDataSource createDataSource() {
-                DefaultHttpDataSource httpDataSource = new DefaultHttpDataSource(userAgent);
-                return new AuthenticatedHttpDataSource(context, httpDataSource);
+                DefaultHttpDataSource dataSource = new DefaultHttpDataSource(userAgent);
+                return new AuthenticatedHttpDataSource(context, dataSource);
             }
-
-            @Override
-            public HttpDataSource.Factory setDefaultRequestProperties(Map<String, String> defaultRequestProperties) {
-                // 不需要设置默认请求头，认证头会在 AuthenticatedHttpDataSource.open() 中动态添加
-                return this;
-            }
-
+            
             @Override
             public HttpDataSource.RequestProperties getDefaultRequestProperties() {
                 return null;
             }
+            
+            @Override
+            public void setDefaultRequestProperty(String name, String value) {
+                // Deprecated in 2.11.8, no-op
+            }
+            
+            @Override
+            public void clearDefaultRequestProperty(String name) {
+                // Deprecated in 2.11.8, no-op
+            }
+            
+            @Override
+            public void clearAllDefaultRequestProperties() {
+                // Deprecated in 2.11.8, no-op
+            }
         };
 
-        // 包装成 DefaultDataSource（支持本地和网络数据）
-        return new DefaultDataSourceFactory(context, httpDataSourceFactory).createDataSource();
+        // 使用 DefaultDataSourceFactory 包装
+        return new DefaultDataSourceFactory(context, httpFactory).createDataSource();
     }
 
     /**

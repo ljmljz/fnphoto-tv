@@ -74,8 +74,8 @@ public class MainFragment extends BrowseSupportFragment {
     private void setupUI() {
         setTitle("飞牛相册");
         setHeadersState(BrowseSupportFragment.HEADERS_DISABLED);
-        setBrandColor(getResources().getColor(android.R.color.black, null));
-        setSearchAffordanceColor(getResources().getColor(android.R.color.white, null));
+        setBrandColor(getResources().getColor(android.R.color.black));
+        setSearchAffordanceColor(getResources().getColor(android.R.color.white));
         
         mCardPresenter = new CardPresenter(baseUrl);
         mRowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
