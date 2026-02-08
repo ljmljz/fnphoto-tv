@@ -540,7 +540,15 @@ public class MainFragment extends BrowseSupportFragment {
 
             if (photo.additional != null && photo.additional.thumbnail != null) {
                 FnHttpApi.GalleryThumbnail thumbnail = photo.additional.thumbnail;
-                thumbUrl = thumbnail.sUrl != null ? baseUrl + thumbnail.sUrl : null;
+                
+                // 对于视频类型，使用中等尺寸缩略图(mUrl)作为预览图，效果更好
+                if ("video".equals(photo.category)) {
+                    thumbUrl = thumbnail.mUrl != null ? baseUrl + thumbnail.mUrl : null;
+                } else {
+                    // 对于照片，使用小尺寸缩略图(sUrl)即可
+                    thumbUrl = thumbnail.sUrl != null ? baseUrl + thumbnail.sUrl : null;
+                }
+                
                 originalUrl = thumbnail.mUrl != null ? baseUrl + thumbnail.mUrl : null;
             }
 

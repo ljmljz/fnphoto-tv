@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="20dp"
             android:focusable="false"
-            android:text="Connect to your Fly-N NAS"
+            android:text="Connect to your fnNAS"
             android:textColor="#9ca3af"
             android:textSize="18sp" />
 
@@ -39,11 +39,12 @@
             android:background="@android:drawable/edit_text"
             android:focusable="true"
             android:focusableInTouchMode="true"
-            android:hint="NAS URL (e.g., http://192.168.1.100:8080)"
+            android:hint="NAS URL (e.g., http://192.168.1.100:5666)"
             android:inputType="textUri"
             android:nextFocusDown="@+id/edit_username"
             android:padding="14dp"
             android:textSize="17sp">
+
             <requestFocus />
         </EditText>
 

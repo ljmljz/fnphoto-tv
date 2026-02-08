@@ -3,19 +3,28 @@ package com.fnphoto.tv;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.fragment.app.FragmentActivity;
+
 import com.fnphoto.tv.cache.CachedImageLoader;
+import com.fnphoto.tv.player.AuthenticatedHttpDataSourceFactory;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.ui.PlayerView;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +42,7 @@ public class MediaDetailActivity extends FragmentActivity {
     private int currentIndex;
     private Handler debounceHandler = new Handler(Looper.getMainLooper());
     private boolean canSwitch = true;
+    private boolean isVideoPlaying = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,12 +81,21 @@ public class MediaDetailActivity extends FragmentActivity {
 
         MediaItem item = mediaList.get(currentIndex);
         Log.d(TAG, "Showing media: " + item.getTitle() + " type: " + item.getType());
+        
+        // 重置视频播放状态
+        isVideoPlaying = false;
 
         // 清除之前的视图
         container.removeAllViews();
+        
+        // 停止之前的播放器
+        if (player != null) {
+            player.release();
+            player = null;
+        }
 
         if ("video".equals(item.getType())) {
-            showVideo(item);
+            showVideoPreview(item);
         } else {
             showPhoto(item);
         }
@@ -121,27 +140,152 @@ public class MediaDetailActivity extends FragmentActivity {
         imageView.setOnClickListener(v -> finish());
     }
 
-    private void showVideo(MediaItem item) {
+    /**
+     * 显示视频预览图和播放按钮
+     */
+    private void showVideoPreview(MediaItem item) {
+        // 使用 thumbnail 的 mUrl 作为预览图
+        String previewUrl = item.getThumbnailUrl();
+        
+        if (previewUrl == null || previewUrl.isEmpty()) {
+            // 没有预览图，直接播放
+            startVideoPlayback(item);
+            return;
+        }
+        
+        // 创建 ImageView 显示预览
+        imageView = new ImageView(this);
+        imageView.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        container.addView(imageView);
+
+        // 获取 token
+        SharedPreferences prefs = getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
+        String token = prefs.getString("api_token", "");
+
+        // 加载预览图并添加播放按钮
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+        CachedImageLoader.loadImage(this, previewUrl, token, screenWidth, screenHeight,
+                new CachedImageLoader.ImageLoadCallback() {
+                    @Override
+                    public void onBitmapLoaded(Bitmap bitmap) {
+                        // 创建带播放按钮的预览图
+                        Bitmap composite = createVideoPreviewWithPlayButton(bitmap, screenWidth, screenHeight);
+                        imageView.setImageBitmap(composite);
+                    }
+
+                    @Override
+                    public void onLoadFailed() {
+                        // 加载失败，直接播放
+                        startVideoPlayback(item);
+                    }
+                });
+
+        // 点击开始播放
+        imageView.setOnClickListener(v -> {
+            if (!isVideoPlaying) {
+                startVideoPlayback(item);
+            }
+        });
+    }
+
+    /**
+     * 创建带播放按钮的视频预览图
+     */
+    private Bitmap createVideoPreviewWithPlayButton(Bitmap thumbnail, int width, int height) {
+        Bitmap composite = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(composite);
+        
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setFilterBitmap(true);
+        
+        // 绘制缩略图（居中裁剪填充）
+        int thumbWidth = thumbnail.getWidth();
+        int thumbHeight = thumbnail.getHeight();
+        
+        float scale = Math.max((float) width / thumbWidth, (float) height / thumbHeight);
+        float srcLeft = Math.max(0, (thumbWidth - width / scale) / 2);
+        float srcTop = Math.max(0, (thumbHeight - height / scale) / 2);
+        float srcRight = Math.min(thumbWidth, srcLeft + width / scale);
+        float srcBottom = Math.min(thumbHeight, srcTop + height / scale);
+        
+        Rect srcRect = new Rect((int) srcLeft, (int) srcTop, (int) srcRight, (int) srcBottom);
+        Rect dstRect = new Rect(0, 0, width, height);
+        
+        canvas.drawBitmap(thumbnail, srcRect, dstRect, paint);
+        
+        // 绘制半透明遮罩
+        paint.setColor(Color.parseColor("#60000000"));
+        canvas.drawRect(0, 0, width, height, paint);
+        
+        // 计算播放按钮尺寸
+        int playButtonRadius = Math.min(width, height) / 12;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        
+        // 绘制圆形背景（带半透明）
+        paint.setColor(Color.parseColor("#CCFFFFFF"));
+        paint.setStyle(Paint.Style.FILL);
+        canvas.drawCircle(centerX, centerY, playButtonRadius, paint);
+        
+        // 绘制播放三角形（红色）
+        paint.setColor(Color.parseColor("#FF0000"));
+        int triangleSize = playButtonRadius / 2;
+        android.graphics.Path path = new android.graphics.Path();
+        // 三角形的三个顶点
+        path.moveTo(centerX - triangleSize / 2, centerY - triangleSize);
+        path.lineTo(centerX - triangleSize / 2, centerY + triangleSize);
+        path.lineTo(centerX + triangleSize, centerY);
+        path.close();
+        canvas.drawPath(path, paint);
+        
+        return composite;
+    }
+
+    /**
+     * 开始播放视频
+     */
+    private void startVideoPlayback(com.fnphoto.tv.MediaItem item) {
+        isVideoPlaying = true;
+
+        // 清除预览图
+        container.removeAllViews();
+
+        // 创建播放器视图
         playerView = new PlayerView(this);
         playerView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
         container.addView(playerView);
 
-        // 初始化播放器
-        if (player != null) {
-            player.release();
-        }
-        player = new SimpleExoPlayer.Builder(this).build();
+        // 构建视频流地址：/p/api/v1/stream/v/{id}
+        SharedPreferences prefs = getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
+        String baseUrl = prefs.getString("nas_url", "");
+        String videoId = item.getId();
+        String videoUrl = baseUrl + "/p/api/v1/stream/v/" + videoId;
+
+        Log.d(TAG, "Playing video: " + videoUrl);
+
+        // 创建带认证的 DataSource Factory
+        AuthenticatedHttpDataSourceFactory dataSourceFactory =
+                new AuthenticatedHttpDataSourceFactory(this, "ExoPlayer");
+
+        // 初始化播放器 (ExoPlayer 2.14.2)
+        player = new SimpleExoPlayer.Builder(this)
+                .setMediaSourceFactory(new ProgressiveMediaSource.Factory(dataSourceFactory))
+                .build();
         playerView.setPlayer(player);
 
-        String mediaUrl = item.getMediaUrl();
-        if (mediaUrl != null) {
-            com.google.android.exoplayer2.MediaItem mediaItem = com.google.android.exoplayer2.MediaItem.fromUri(mediaUrl);
-            player.setMediaItem(mediaItem);
-            player.prepare();
-            player.play();
-        }
+        // 创建 MediaItem 并播放
+        com.google.android.exoplayer2.MediaItem mediaItem = 
+                com.google.android.exoplayer2.MediaItem.fromUri(videoUrl);
+        player.setMediaItem(mediaItem);
+        player.prepare();
+        player.play();
     }
 
     private void switchToPrevious() {
