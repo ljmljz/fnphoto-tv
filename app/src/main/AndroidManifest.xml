@@ -15,11 +15,13 @@
         android:name=".FnPhotoApplication"
         android:allowBackup="true"
         android:icon="@drawable/app_icon"
+        android:roundIcon="@drawable/app_icon"
         android:label="fnPhoto TV"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.Leanback"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:banner="@drawable/app_icon">
         
         <activity
             android:name=".LoginActivity"
@@ -33,11 +35,9 @@
 
         <activity
             android:name=".MainActivity"
-            android:banner="@drawable/app_banner"
+            android:banner="@drawable/app_icon"
             android:icon="@drawable/app_icon"
             android:screenOrientation="landscape" />
-
-        <activity android:name=".PlaybackActivity" />
         
         <activity 
             android:name=".PhotoDetailActivity"

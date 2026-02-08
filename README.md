@@ -13,7 +13,7 @@ An Android TV application for browsing photos and videos from Feiniu NAS (fnOS) 
 
 ## Requirements
 
-- Android TV or Android device with API level 21+ (Android 5.0)
+- Android TV or Android device with API level 19+ (Android 4.4)
 - Feiniu NAS (fnOS) running photo gallery service
 - Network access to your NAS
 
