@@ -71,18 +71,32 @@
             android:id="@+id/edit_api_token"
             android:layout_width="550dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="12dp"
             android:background="@android:drawable/edit_text"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:hint="Password"
             android:inputType="textPassword"
             android:nextFocusUp="@+id/edit_username"
-            android:nextFocusDown="@+id/btn_login"
+            android:nextFocusDown="@+id/cb_remember"
             android:padding="14dp"
             android:textColor="@android:color/black"
             android:textColorHint="?android:attr/textColorHintInverse"
             android:textSize="17sp" />
+
+        <CheckBox
+            android:id="@+id/cb_remember"
+            android:layout_width="550dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusUp="@+id/edit_api_token"
+            android:nextFocusDown="@+id/btn_login"
+            android:text="记住登录信息"
+            android:textColor="#9ca3af"
+            android:textSize="17sp"
+            android:checked="true" />
 
         <Button
             android:id="@+id/btn_login"

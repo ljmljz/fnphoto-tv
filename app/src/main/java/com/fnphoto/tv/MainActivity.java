@@ -1,6 +1,7 @@
 package com.fnphoto.tv;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
@@ -166,6 +167,9 @@ public class MainActivity extends FragmentActivity {
         
         // 第三组：设置
         menuAdapter.add(new MenuItem("设置", "settings"));
+        
+        // 第四组：退出登录
+        menuAdapter.add(new MenuItem("退出登录", "logout"));
 
         menuGrid.setAdapter(menuAdapter);
         menuGrid.setWindowAlignment(VerticalGridView.WINDOW_ALIGN_HIGH_EDGE);
@@ -205,11 +209,38 @@ public class MainActivity extends FragmentActivity {
             case "settings":
                 // 打开设置
                 break;
+            case "logout":
+                // 退出登录
+                logout();
+                return; // 退出后不关闭菜单，因为 activity 会被 finish
             // 其他菜单项...
         }
         
         // 关闭菜单
         drawerLayout.closeDrawer(GravityCompat.END);
+    }
+    
+    private void logout() {
+        // 清除所有登录信息
+        SharedPreferences prefs = getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .remove("nas_url")
+            .remove("api_token")
+            .remove("secret")
+            .remove("backId")
+            .remove("has_credentials")
+            .remove("saved_url")
+            .remove("saved_user")
+            .remove("saved_pass")
+            .apply();
+        
+        Toast.makeText(this, "已退出登录", Toast.LENGTH_SHORT).show();
+        
+        // 跳转到登录界面
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
     @Override

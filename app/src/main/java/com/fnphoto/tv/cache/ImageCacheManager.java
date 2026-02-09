@@ -17,8 +17,8 @@ import java.util.concurrent.Executors;
 public class ImageCacheManager {
     private static final String TAG = "ImageCacheManager";
     private static final String CACHE_DIR = "image_cache";
-    private static final long DEFAULT_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24小时
-    private static final long MAX_CACHE_SIZE = 100 * 1024 * 1024; // 100MB
+    private static final long DEFAULT_CACHE_EXPIRY = 10 * 24 * 60 * 60 * 1000; // 10 * 24小时
+    private static final long MAX_CACHE_SIZE = 200 * 1024 * 1024; // 200MB
     
     private static ImageCacheManager instance;
     private File cacheDir;
