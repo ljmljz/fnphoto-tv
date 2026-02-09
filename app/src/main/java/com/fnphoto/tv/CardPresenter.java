@@ -95,6 +95,12 @@ public class CardPresenter extends Presenter {
             // 视频类型：显示缩略图并添加播放图标
             cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
             loadVideoThumbnail(cardView, mediaItem);
+        } else if ("folder".equals(mediaItem.getType())) {
+            // 文件夹类型：显示文件夹图标
+            cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
+            Drawable drawable = ContextCompat.getDrawable(cardView.getContext(), 
+                    android.R.drawable.ic_menu_gallery);
+            cardView.setMainImage(drawable);
         } else {
             // 照片类型
             cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);

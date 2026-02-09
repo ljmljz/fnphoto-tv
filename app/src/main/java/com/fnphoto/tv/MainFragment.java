@@ -92,6 +92,9 @@ public class MainFragment extends BrowseSupportFragment {
                     
                     if ("date".equals(mediaItem.getType())) {
                         loadPhotosByDate(mediaItem.getDateStr(), mediaItem.getPhotoCount());
+                    } else if ("folder".equals(mediaItem.getType())) {
+                        // 打开文件夹浏览
+                        openFolderBrowse(mediaItem);
                     } else if ("video".equals(mediaItem.getType()) || "photo".equals(mediaItem.getType())) {
                         openMediaDetail(mediaItem);
                     }
@@ -317,42 +320,71 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
-        String authx = FnAuthUtils.generateAuthX("/p/api/v1/photo/folder/view", "GET", null);
+        Boolean desc = false;
+        Integer orderBy = 2;
+        StringBuilder paramsBuilder = new StringBuilder();
+        paramsBuilder.append("desc=").append(desc);
+        paramsBuilder.append("&orderBy=").append(orderBy);
 
-        api.getManagedFolders(token, authx).enqueue(new Callback<FnHttpApi.FolderViewResponse>() {
+        String params = paramsBuilder.toString();
+
+        String authx = FnAuthUtils.generateAuthX("/p/api/v1/photo/folder/list", "GET", params);
+
+        api.getManagedFolders(token, authx, desc, orderBy).enqueue(new Callback<FnHttpApi.FolderListResponse>() {
             @Override
-            public void onResponse(Call<FnHttpApi.FolderViewResponse> call,
-                                   Response<FnHttpApi.FolderViewResponse> response) {
+            public void onResponse(Call<FnHttpApi.FolderListResponse> call,
+                                   Response<FnHttpApi.FolderListResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    FnHttpApi.FolderViewResponse result = response.body();
-                    if (result.data != null && result.data.folders != null) {
-                        displayFolders(result.data.folders);
+                    FnHttpApi.FolderListResponse result = response.body();
+                    if (result.code == 0 && result.data != null && result.data.list != null) {
+                        displayFolders(result.data.list);
+                    } else {
+                        Log.e(TAG, "加载文件夹失败: code=" + result.code + ", msg=" + result.msg);
                     }
+                } else {
+                    Log.e(TAG, "加载文件夹失败: HTTP " + response.code());
                 }
             }
 
             @Override
-            public void onFailure(Call<FnHttpApi.FolderViewResponse> call, Throwable t) {
+            public void onFailure(Call<FnHttpApi.FolderListResponse> call, Throwable t) {
                 Log.e(TAG, "加载文件夹失败", t);
             }
         });
     }
 
-    private void displayFolders(List<FnHttpApi.ManagedFolder> folders) {
+    private void displayFolders(List<FnHttpApi.FolderItem> folders) {
         isPhotoListView = false;
         timelineItems = null;
         mRowsAdapter.clear();
         
-        HeaderItem header = new HeaderItem("文件夹");
+        HeaderItem header = new HeaderItem("文件夹 (" + folders.size() + ")");
         ArrayObjectAdapter listRowAdapter = new ArrayObjectAdapter(mCardPresenter);
         
-        for (FnHttpApi.ManagedFolder folder : folders) {
+        for (FnHttpApi.FolderItem folder : folders) {
+            // 构建显示文本：文件夹名 + 文件数量
+            String displayName = folder.getFolderName();
+            int totalCount = folder.getTotalCount();
+            if (totalCount > 0) {
+                StringBuilder countInfo = new StringBuilder();
+                if (folder.photoCount > 0) {
+                    countInfo.append(folder.photoCount).append("张照片");
+                }
+                if (folder.videoCount > 0) {
+                    if (countInfo.length() > 0) {
+                        countInfo.append("，");
+                    }
+                    countInfo.append(folder.videoCount).append("个视频");
+                }
+                displayName = displayName + " (" + countInfo.toString() + ")";
+            }
+            
             MediaItem item = new MediaItem(
-                folder.id,
-                folder.name,
+                String.valueOf(folder.folderId),
+                displayName,
                 "folder",
                 null,
-                null
+                folder.folderPath  // 保存完整路径，后续可能需要用到
             );
             listRowAdapter.add(item);
         }
@@ -597,7 +629,21 @@ public class MainFragment extends BrowseSupportFragment {
         intent.putExtra("CURRENT_INDEX", index);
         startActivity(intent);
     }
-    
+
+    private void openFolderBrowse(MediaItem folderItem) {
+        // 获取文件夹路径
+        String folderPath = folderItem.getMediaUrl(); // 我们之前将路径保存在 mediaUrl 中
+        if (folderPath == null || folderPath.isEmpty()) {
+            Log.e(TAG, "文件夹路径为空");
+            return;
+        }
+
+        Intent intent = new Intent(getActivity(), FolderBrowseActivity.class);
+        intent.putExtra("FOLDER_PATH", folderPath);
+        intent.putExtra("FOLDER_NAME", folderItem.getTitle());
+        startActivity(intent);
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();

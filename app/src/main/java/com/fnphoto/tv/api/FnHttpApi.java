@@ -77,15 +77,47 @@ public interface FnHttpApi {
     
     /**
      * 管理的文件夹视图
-     * GET /p/api/v1/photo/folder/view
+     * GET /p/api/v1/photo/folder/list
      * 获取相册系统管理的文件夹列表
      */
-    @GET("/p/api/v1/photo/folder/view")
-    Call<FolderViewResponse> getManagedFolders(
+    @GET("/p/api/v1/photo/folder/list")
+    Call<FolderListResponse> getManagedFolders(
         @Header("accesstoken") String accesstoken,
-        @Header("authx") String authx
+        @Header("authx") String authx,
+        @Query("desc") Boolean desc,
+        @Query("orderBy") Integer orderBy
     );
     
+    /**
+     * 获取子文件夹列表
+     * GET /p/api/v1/folder_view/getFolderList
+     * 获取指定文件夹下的子文件夹列表
+     */
+    @GET("/p/api/v1/folder_view/getFolderList")
+    Call<SubFolderListResponse> getSubFolders(
+        @Header("accesstoken") String accesstoken,
+        @Header("authx") String authx,
+        @Query("folderPath") String folderPath,
+        @Query("desc") Boolean desc,
+        @Query("orderBy") Integer orderBy
+    );
+
+    /**
+     * 获取文件列表
+     * GET /p/api/v1/folder_view/getFileList
+     * 获取指定文件夹下的媒体文件列表
+     */
+    @GET("/p/api/v1/folder_view/getFileList")
+    Call<FolderFileListResponse> getFolderFiles(
+        @Header("accesstoken") String accesstoken,
+        @Header("authx") String authx,
+        @Query("folderPath") String folderPath,
+        @Query("desc") Boolean desc,
+        @Query("orderBy") Integer orderBy,
+        @Query("limit") int limit,
+        @Query("offset") int offset
+    );
+
     // ==================== 用户系统接口 ====================
     
     /**
@@ -279,6 +311,114 @@ public interface FnHttpApi {
         public String name;
         public String path;
         public boolean isSystem;   // 是否系统文件夹
+    }
+    
+    // 文件夹列表响应 (GET /p/api/v1/photo/folder/list)
+    class FolderListResponse {
+        public int code;
+        public String msg;
+        public FolderListData data;
+    }
+    
+    class FolderListData {
+        public List<FolderItem> list;
+    }
+    
+    class FolderItem {
+        public int folderId;           // 文件夹ID
+        public String folderPath;      // 文件夹路径
+        public int photoCount;         // 照片数量
+        public int videoCount;         // 视频数量
+        public int status;             // 状态
+        public boolean isDefault;      // 是否默认文件夹
+        public HasWriteAccess hasWriteAccess;  // 写入权限信息
+        
+        // 获取文件夹名称（从路径中提取）
+        public String getFolderName() {
+            if (folderPath == null || folderPath.isEmpty()) {
+                return "未知文件夹";
+            }
+            int lastSlash = folderPath.lastIndexOf('/');
+            if (lastSlash >= 0 && lastSlash < folderPath.length() - 1) {
+                return folderPath.substring(lastSlash + 1);
+            }
+            return folderPath;
+        }
+        
+        // 获取总文件数
+        public int getTotalCount() {
+            return photoCount + videoCount;
+        }
+    }
+    
+    class HasWriteAccess {
+        public long quotaCurr;         // 当前配额使用量
+        public long quotaMax;          // 配额上限
+        public boolean hasWriteAccess; // 是否有写入权限
+    }
+    
+    // 子文件夹列表响应 (GET /p/api/v1/folder_view/getFolderList)
+    class SubFolderListResponse {
+        public int code;
+        public String msg;
+        public SubFolderListData data;
+    }
+
+    class SubFolderListData {
+        public List<SubFolderItem> list;
+        public int total;
+    }
+
+    class SubFolderItem {
+        public String name;    // 文件夹名称
+        public String path;    // 文件夹路径
+    }
+
+    // 文件夹文件列表响应 (GET /p/api/v1/folder_view/getFileList)
+    class FolderFileListResponse {
+        public int code;
+        public String msg;
+        public FolderFileListData data;
+    }
+
+    class FolderFileListData {
+        public List<FolderMediaItem> list;
+        public int total;
+    }
+
+    class FolderMediaItem {
+        public int id;                 // 媒体ID
+        public int ownerId;            // 所有者ID
+        public String dateTime;        // 日期时间
+        public String photoDateTime;   // 照片拍摄时间
+        public String fileType;        // 文件类型: jpeg/mp4等
+        public String category;        // 类型: photo/video
+        public String fileName;        // 文件名
+        public long fileSize;          // 文件大小
+        public int isCollect;          // 是否收藏
+        public String mp;              // 像素
+        public String filePath;        // 文件路径
+        public int height;             // 高度
+        public int width;              // 宽度
+        public int flash;              // 闪光灯
+        public String geo;             // 地理位置
+        public int isLive;             // 是否实况照片
+        public int mediaDuration;      // 视频时长
+        public int rotation;           // 旋转角度
+        public int isCanPreview;       // 是否可预览
+        public String photoUUID;       // 照片UUID
+        public String fileHash;        // 文件哈希
+        // 缩略图信息将在另一个接口获取，或使用默认缩略图路径
+    }
+
+    // 缩略图信息（用于其他接口）
+    class BrowseThumbnail {
+        public String xsUrl;   // 超小尺寸
+        public String sUrl;    // 小尺寸
+        public String mUrl;    // 中等尺寸
+        public String lUrl;    // 大尺寸
+        public String originalUrl;  // 原图
+        public String videoUrl;     // 视频URL
     }
     
     // 用户信息

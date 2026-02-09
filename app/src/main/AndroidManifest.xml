@@ -46,5 +46,9 @@
         <activity 
             android:name=".MediaDetailActivity"
             android:screenOrientation="landscape" />
+            
+        <activity 
+            android:name=".FolderBrowseActivity"
+            android:screenOrientation="landscape" />
     </application>
 </manifest>

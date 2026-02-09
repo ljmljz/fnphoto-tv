@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="4dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:background="@drawable/menu_item_background">
+
+    <ImageView
+        android:id="@+id/iv_photo"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:scaleType="centerCrop"
+        android:background="#333333" />
+
+    <!-- 视频指示器 -->
+    <View
+        android:id="@+id/v_video_indicator"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="8dp"
+        android:background="@android:drawable/ic_media_play"
+        android:visibility="gone" />
+
+</FrameLayout>
