@@ -15,6 +15,7 @@ import android.widget.*;
 import androidx.fragment.app.FragmentActivity;
 import com.fnphoto.tv.api.FnConnectApi;
 import com.fnphoto.tv.api.FnWebSocketClient;
+import com.fnphoto.tv.api.UrlUtils;
 import org.json.JSONObject;
 
 public class LoginActivity extends FragmentActivity {
@@ -113,9 +114,9 @@ public class LoginActivity extends FragmentActivity {
         if (FnConnectApi.isFnId(input)) {
             resolveFnIdAndLogin(input, user, pass);
         } else {
-            String wsUrl = normalizeToWsUrl(input);
+            String httpUrl = normalizeUrl(input);
             tvStatus.setText("正在连接 " + input + "...");
-            doWebSocketLogin(wsUrl, input, user, pass);
+            doWebSocketLogin(httpUrl, user, pass);
         }
     }
 
@@ -140,9 +141,8 @@ public class LoginActivity extends FragmentActivity {
                 String httpUrl = FnConnectApi.findReachableAddrSync(response.addresses);
 
                 if (httpUrl != null) {
-                    String reachableAddr = httpUrl;
-                    runOnUiThread(() -> tvStatus.setText("已找到可达地址: " + reachableAddr.replace("http://", "")));
-                    doWebSocketLogin(httpUrl, reachableAddr, user, pass);
+                    runOnUiThread(() -> tvStatus.setText("已找到可达地址: " + httpUrl.replace("http://", "")));
+                    doWebSocketLogin(httpUrl, user, pass);
                 } else {
                     runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
@@ -163,39 +163,20 @@ public class LoginActivity extends FragmentActivity {
         });
     }
 
-    private String normalizeToWsUrl(String input) {
-        if (input.startsWith("http://") || input.startsWith("https://")) {
-            String host = input.replace("http://", "").replace("https://", "");
-            if (host.contains("/")) host = host.substring(0, host.indexOf("/"));
-            if (host.contains(":")) {
-                input = input.startsWith("https://") ? input : "http://" + host;
-            } else {
-                input = input.startsWith("https://") ? input : "http://" + host + ":8000";
-            }
-        } else {
-            if (input.contains(":") && !input.startsWith("[")) {
-                input = "http://" + input;
-            } else {
-                input = "http://" + input + ":8000";
-            }
-        }
-
-        return input
-            .replace("http://", "ws://")
-            .replace("https://", "wss://")
-            + "/websocket?type=main";
+    String normalizeUrl(String input) {
+        return UrlUtils.normalizeUrl(input);
     }
 
-    private void doWebSocketLogin(String wsUrl, String displayUrl, String user, String pass) {
+    private void doWebSocketLogin(String httpUrl, String user, String pass) {
         wsClient = new FnWebSocketClient();
-        wsClient.startLogin(wsUrl, user, pass, new FnWebSocketClient.LoginCallback() {
+        wsClient.startLogin(httpUrl, user, pass, new FnWebSocketClient.LoginCallback() {
             @Override
             public void onSuccess(JSONObject response) {
                 runOnUiThread(() -> {
                     android.util.Log.d("FnWebSocket", "Login Successfully");
                     progressBar.setVisibility(View.GONE);
                     tvStatus.setVisibility(View.GONE);
-                    saveSession(displayUrl, user, pass, response);
+                    saveSession(httpUrl, user, pass, response);
                 });
             }
 
@@ -223,8 +204,8 @@ public class LoginActivity extends FragmentActivity {
             if (FnConnectApi.isFnId(url)) {
                 resolveFnIdAndLogin(url, user, pass);
             } else {
-                String wsUrl = normalizeToWsUrl(url);
-                doWebSocketLogin(wsUrl, url, user, pass);
+                String httpUrl = normalizeUrl(url);
+                doWebSocketLogin(httpUrl, user, pass);
             }
         }, 500);
     }

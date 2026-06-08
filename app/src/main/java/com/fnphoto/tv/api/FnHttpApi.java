@@ -200,6 +200,50 @@ public interface FnHttpApi {
         @Query("offset") int offset
     );
 
+    // ==================== 人物识别接口 ====================
+
+    /**
+     * 获取人物列表
+     * GET /p/api/v1/ai-person/list?getAll=true&limit=-1&orderBy=0
+     */
+    @GET("/p/api/v1/ai-person/list")
+    Call<PersonListResponse> getPersonList(
+        @Header("accesstoken") String accesstoken,
+        @Header("authx") String authx,
+        @Query("getAll") Boolean getAll,
+        @Query("limit") int limit,
+        @Query("orderBy") int orderBy
+    );
+
+    /**
+     * 获取人物时间线
+     * GET /p/api/v1/ai-person/photoLibrary/timeLine?id={personId}
+     */
+    @GET("/p/api/v1/ai-person/photoLibrary/timeLine")
+    Call<PersonTimelineResponse> getPersonTimeline(
+        @Header("accesstoken") String accesstoken,
+        @Header("authx") String authx,
+        @Query("id") int personId
+    );
+
+    /**
+     * 获取人物某天的照片列表
+     * GET /p/api/v1/ai-person/photoLibrary/list
+     */
+    @GET("/p/api/v1/ai-person/photoLibrary/list")
+    Call<GalleryListResponse> getPersonPhotos(
+        @Header("accesstoken") String accesstoken,
+        @Header("authx") String authx,
+        @Query("personId") int personId,
+        @Query("start_time") String startTime,
+        @Query("end_time") String endTime,
+        @Query("limit") int limit,
+        @Query("offset") int offset,
+        @Query("album_id") int albumId,
+        @Query("startTime") String altStartTime,
+        @Query("endTime") String altEndTime
+    );
+
     // ==================== 收藏接口 ====================
 
     /**
@@ -792,6 +836,44 @@ public interface FnHttpApi {
         public Integer count;
         public Boolean hasNext;
         public Integer total;
+    }
+
+    // ==================== 人物识别模型 ====================
+
+    class PersonListResponse {
+        public int code;
+        public String msg;
+        public PersonListData data;
+    }
+
+    class PersonListData {
+        public List<PersonItem> list;
+    }
+
+    class PersonItem {
+        public int id;
+        public String name;
+        public int faceId;
+        public int itemCount;
+        public String birthday;
+        public boolean isHide;
+    }
+
+    class PersonTimelineResponse {
+        public int code;
+        public String msg;
+        public PersonTimelineData data;
+    }
+
+    class PersonTimelineData {
+        public List<PersonTimelineItem> list;
+    }
+
+    class PersonTimelineItem {
+        public int year;
+        public int month;
+        public int day;
+        public int itemCount;
     }
 
 }

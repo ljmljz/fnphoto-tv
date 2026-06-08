@@ -1,6 +1,6 @@
 # fnPhoto TV
 
-Android TV 端飞牛 NAS (fnOS) 相册浏览应用，支持浏览照片和视频。
+Android TV 端FN NAS (fnOS) 相册浏览应用，支持浏览照片和视频。
 
 ## 功能特点
 
@@ -18,10 +18,6 @@ Android TV 端飞牛 NAS (fnOS) 相册浏览应用，支持浏览照片和视频
 - Android TV 或 API 级别 19+（Android 4.4）的 Android 设备
 - 运行相册服务的飞牛 NAS（fnOS）
 - 与 NAS 在同一局域网内
-
-## 当前限制
-
-- **仅支持 FN Connect 登录**：云端 API 需要 TLS 1.2+。API 19（Android 4.4）设备已内置 Conscrypt 以提供现代 TLS 支持。
 
 ## 安装步骤
 

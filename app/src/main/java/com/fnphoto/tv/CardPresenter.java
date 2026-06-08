@@ -90,7 +90,7 @@ public class CardPresenter extends Presenter {
         cardView.setTag(R.id.media_item_id, mediaItem.getId());
         cardView.setTag(R.id.media_item_type, mediaItem.getType());
 
-        if ("date".equals(mediaItem.getType())) {
+        if ("date".equals(mediaItem.getType()) || "person_date".equals(mediaItem.getType())) {
             cardView.setMainImageDimensions(DATE_CARD_WIDTH, DATE_CARD_HEIGHT);
             
             List<String> previewUrls = mediaItem.getPreviewThumbUrls();
@@ -111,6 +111,10 @@ public class CardPresenter extends Presenter {
             cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
             loadSingleImage(cardView, mediaItem);
             cardView.setContentText(mediaItem.getDateStr() != null ? mediaItem.getDateStr() : "");
+        } else if ("person".equals(mediaItem.getType())) {
+            cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
+            loadSingleImage(cardView, mediaItem);
+            cardView.setContentText(mediaItem.getPhotoCount() + "张照片");
         } else {
             // 照片类型
             cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);

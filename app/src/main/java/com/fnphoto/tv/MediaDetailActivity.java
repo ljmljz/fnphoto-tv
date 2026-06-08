@@ -96,7 +96,8 @@ public class MediaDetailActivity extends FragmentActivity {
                 FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(container);
 
-        mediaList = (ArrayList<MediaItem>) getIntent().getSerializableExtra("MEDIA_LIST");
+        mediaList = (ArrayList<MediaItem>) MediaListHolder.get();
+        MediaListHolder.clear();
         currentIndex = getIntent().getIntExtra("CURRENT_INDEX", 0);
 
         if (mediaList == null || mediaList.isEmpty()) {

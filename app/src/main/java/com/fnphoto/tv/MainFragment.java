@@ -1,6 +1,8 @@
 package com.fnphoto.tv;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -61,6 +63,12 @@ public class MainFragment extends BrowseSupportFragment {
     // 保存滚动位置
     private int savedTimelinePosition = -1;  // 保存时间线的选中位置
     private int savedPhotoListPosition = -1; // 保存照片列表的选中位置
+    private SharedPreferences.OnSharedPreferenceChangeListener tokenChangeListener;
+
+    // 人物模式
+    private int currentPersonId = -1;
+    private String currentPersonName;
+    private List<FnHttpApi.PersonTimelineItem> savedPersonTimelineItems;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -83,13 +91,29 @@ public class MainFragment extends BrowseSupportFragment {
         }
 
         setupEventListeners();
+        watchTokenChanges();
+    }
+
+    private void watchTokenChanges() {
+        if (getActivity() == null) return;
+        SharedPreferences prefs = getActivity().getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
+        tokenChangeListener = (sharedPreferences, key) -> {
+            if ("api_token".equals(key)) {
+                String newToken = sharedPreferences.getString(key, "");
+                if (!newToken.isEmpty() && !newToken.equals(token)) {
+                    token = newToken;
+                    Log.i(TAG, "Token updated from SharedPreferences");
+                }
+            }
+        };
+        prefs.registerOnSharedPreferenceChangeListener(tokenChangeListener);
     }
 
     private void setupUI() {
-        setTitle("飞牛相册");
+        setTitle("");
         setHeadersState(BrowseSupportFragment.HEADERS_DISABLED);
-        setBrandColor(getResources().getColor(android.R.color.black));
-        setSearchAffordanceColor(getResources().getColor(android.R.color.white));
+        setBrandColor(getResources().getColor(android.R.color.transparent));
+        setSearchAffordanceColor(getResources().getColor(android.R.color.transparent));
         
         mCardPresenter = new CardPresenter(baseUrl);
         mRowsAdapter = new ArrayObjectAdapter(new ListRowPresenter());
@@ -106,12 +130,17 @@ public class MainFragment extends BrowseSupportFragment {
                     
                     if ("date".equals(mediaItem.getType())) {
                         loadPhotosByDate(mediaItem.getDateStr(), mediaItem.getPhotoCount());
+                    } else if ("person_date".equals(mediaItem.getType())) {
+                        loadPersonPhotosByDate(mediaItem.getDateStr(), mediaItem.getPhotoCount());
                     } else if ("folder".equals(mediaItem.getType())) {
                         openFolderBrowse(mediaItem);
                     } else if ("album".equals(mediaItem.getType())) {
                         loadPhotosByAlbum(mediaItem.getId(), mediaItem.getTitle());
                     } else if ("place".equals(mediaItem.getType())) {
                         loadPhotosByGeo(mediaItem);
+                    } else if ("person".equals(mediaItem.getType())) {
+                        int personId = Integer.parseInt(mediaItem.getId());
+                        loadPersonTimeline(personId, mediaItem.getTitle());
                     } else if ("video".equals(mediaItem.getType()) || "photo".equals(mediaItem.getType())) {
                         openMediaDetail(mediaItem);
                     }
@@ -207,10 +236,18 @@ public class MainFragment extends BrowseSupportFragment {
             } else if (savedPlacesList != null) {
                 Log.d(TAG, "Returning to places list");
                 displayPlaces(savedPlacesList);
+            } else if (savedPersonTimelineItems != null) {
+                Log.d(TAG, "Returning to person timeline");
+                displayPersonTimeline(savedPersonTimelineItems);
             } else {
                 return false;
             }
             return true;
+        } else if (currentPersonId > 0) {
+            Log.d(TAG, "Returning from person timeline to person list");
+            currentPersonId = -1;
+            currentPersonName = null;
+            return false;
         }
         return false;
     }
@@ -282,12 +319,14 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载...");
         String authx = FnAuthUtils.generateAuthX("/p/api/v1/gallery/timeline", "GET", null);
 
         api.getTimeline(token, authx, null).enqueue(new Callback<FnHttpApi.TimelineResponse>() {
             @Override
             public void onResponse(Call<FnHttpApi.TimelineResponse> call, 
                                    Response<FnHttpApi.TimelineResponse> response) {
+                hideLoadingOverlay();
                 if (response.isSuccessful() && response.body() != null) {
                     FnHttpApi.TimelineResponse result = response.body();
                     if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -299,6 +338,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(Call<FnHttpApi.TimelineResponse> call, Throwable t) {
                 Log.e(TAG, "加载时间线失败", t);
+                hideLoadingOverlay();
             }
         });
     }
@@ -355,6 +395,7 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载文件夹...");
         Boolean desc = false;
         Integer orderBy = 2;
         StringBuilder paramsBuilder = new StringBuilder();
@@ -369,6 +410,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onResponse(Call<FnHttpApi.FolderListResponse> call,
                                    Response<FnHttpApi.FolderListResponse> response) {
+                hideLoadingOverlay();
                 if (response.isSuccessful() && response.body() != null) {
                     FnHttpApi.FolderListResponse result = response.body();
                     if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -384,6 +426,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(Call<FnHttpApi.FolderListResponse> call, Throwable t) {
                 Log.e(TAG, "加载文件夹失败", t);
+                hideLoadingOverlay();
             }
         });
     }
@@ -443,6 +486,7 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载相册...");
         String params = "sort_direction=desc&sort_by=date_time&offset=0&limit=1000";
         String authx = FnAuthUtils.generateAuthX("/p/api/v1/album/list", "GET", params);
 
@@ -450,6 +494,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onResponse(Call<FnHttpApi.AlbumListResponse> call,
                                    Response<FnHttpApi.AlbumListResponse> response) {
+                hideLoadingOverlay();
                 if (response.isSuccessful() && response.body() != null) {
                     FnHttpApi.AlbumListResponse result = response.body();
                     if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -461,6 +506,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(Call<FnHttpApi.AlbumListResponse> call, Throwable t) {
                 Log.e(TAG, "加载相册失败", t);
+                hideLoadingOverlay();
             }
         });
     }
@@ -587,6 +633,7 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载照片...");
         Log.d(TAG, "Loading photos for date: " + dateStr);
 
         String dateTime = dateStr.replace("-", ":");
@@ -616,6 +663,7 @@ public class MainFragment extends BrowseSupportFragment {
                 @Override
                 public void onResponse(Call<FnHttpApi.GalleryListResponse> call,
                                        Response<FnHttpApi.GalleryListResponse> response) {
+                    hideLoadingOverlay();
                     if (response.isSuccessful() && response.body() != null) {
                         FnHttpApi.GalleryListResponse result = response.body();
                         if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -627,6 +675,7 @@ public class MainFragment extends BrowseSupportFragment {
                 @Override
                 public void onFailure(Call<FnHttpApi.GalleryListResponse> call, Throwable t) {
                     Log.e(TAG, "加载照片列表失败", t);
+                    hideLoadingOverlay();
                 }
             });
     }
@@ -684,6 +733,7 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载收藏...");
         String params = "is_collect=1";
         String authx = FnAuthUtils.generateAuthX("/p/api/v1/gallery/timeline", "GET", params);
 
@@ -691,6 +741,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onResponse(Call<FnHttpApi.TimelineResponse> call,
                                    Response<FnHttpApi.TimelineResponse> response) {
+                hideLoadingOverlay();
                 if (response.isSuccessful() && response.body() != null) {
                     FnHttpApi.TimelineResponse result = response.body();
                     if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -704,6 +755,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(Call<FnHttpApi.TimelineResponse> call, Throwable t) {
                 Log.e(TAG, "加载收藏失败", t);
+                hideLoadingOverlay();
                 showEmptyState("加载失败");
             }
         });
@@ -715,12 +767,14 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载最近照片...");
         String authx = FnAuthUtils.generateAuthX("/p/api/v1/explore/recent_timeline", "GET", null);
 
         api.getRecentTimeline(token, authx).enqueue(new Callback<FnHttpApi.TimelineResponse>() {
             @Override
             public void onResponse(Call<FnHttpApi.TimelineResponse> call,
                                    Response<FnHttpApi.TimelineResponse> response) {
+                hideLoadingOverlay();
                 if (response.isSuccessful() && response.body() != null) {
                     FnHttpApi.TimelineResponse result = response.body();
                     if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -734,6 +788,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(Call<FnHttpApi.TimelineResponse> call, Throwable t) {
                 Log.e(TAG, "加载最近照片失败", t);
+                hideLoadingOverlay();
                 showEmptyState("加载失败");
             }
         });
@@ -745,6 +800,7 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载地点...");
         String params = "offset=0&limit=-1";
         String authx = FnAuthUtils.generateAuthX("/p/api/v1/explore/geos", "GET", params);
 
@@ -752,6 +808,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onResponse(Call<FnHttpApi.GeoListResponse> call,
                                    Response<FnHttpApi.GeoListResponse> response) {
+                hideLoadingOverlay();
                 if (response.isSuccessful() && response.body() != null) {
                     FnHttpApi.GeoListResponse result = response.body();
                     if (result.code == 0 && result.data != null && result.data.list != null) {
@@ -765,6 +822,7 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(Call<FnHttpApi.GeoListResponse> call, Throwable t) {
                 Log.e(TAG, "加载地点失败", t);
+                hideLoadingOverlay();
                 showEmptyState("加载失败");
             }
         });
@@ -946,6 +1004,8 @@ public class MainFragment extends BrowseSupportFragment {
             return;
         }
 
+        showLoadingOverlay("正在加载地点照片...");
+
         String[] parts = placeItem.getId().split("/", 2);
         final String country = parts.length > 0 ? parts[0] : "";
         final String city = parts.length > 1 ? parts[1] : "";
@@ -976,7 +1036,10 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 Log.e(TAG, "地点照片请求网络异常", e);
-                getActivity().runOnUiThread(() -> showEmptyState("网络异常: " + e.getMessage()));
+                getActivity().runOnUiThread(() -> {
+                    hideLoadingOverlay();
+                    showEmptyState("网络异常: " + e.getMessage());
+                });
             }
 
             @Override
@@ -991,23 +1054,55 @@ public class MainFragment extends BrowseSupportFragment {
                         FnHttpApi.SearchResultsResponse result = gson.fromJson(responseBody, FnHttpApi.SearchResultsResponse.class);
                         if (result.code == 0 && result.data != null && result.data.list != null) {
                             final List<FnHttpApi.GalleryPhoto> photos = result.data.list;
-                            getActivity().runOnUiThread(() -> displayGeoPhotos(placeName, photos));
+                            getActivity().runOnUiThread(() -> {
+                                hideLoadingOverlay();
+                                displayGeoPhotos(placeName, photos);
+                            });
                         } else {
                             Log.e(TAG, "地点照片返回异常: code=" + result.code);
-                            getActivity().runOnUiThread(() -> showEmptyState("暂无照片"));
+                            getActivity().runOnUiThread(() -> {
+                                hideLoadingOverlay();
+                                showEmptyState("暂无照片");
+                            });
                         }
                     } else {
                         Log.e(TAG, "地点照片请求失败: code=" + response.code() + " body=" + responseBody);
-                        getActivity().runOnUiThread(() -> showEmptyState("请求失败(" + response.code() + ")"));
+                        getActivity().runOnUiThread(() -> {
+                            hideLoadingOverlay();
+                            showEmptyState("请求失败(" + response.code() + ")");
+                        });
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "解析响应异常", e);
-                    getActivity().runOnUiThread(() -> showEmptyState("解析失败"));
+                    getActivity().runOnUiThread(() -> {
+                        hideLoadingOverlay();
+                        showEmptyState("解析失败");
+                    });
                 } finally {
                     response.close();
                 }
             }
         });
+    }
+
+    private void showLoadingOverlay(String message) {
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).showLoading(message);
+                }
+            });
+        }
+    }
+
+    private void hideLoadingOverlay() {
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).hideLoading();
+                }
+            });
+        }
     }
 
     private void displayGeoPhotos(String placeName, List<FnHttpApi.GalleryPhoto> photos) {
@@ -1054,6 +1149,220 @@ public class MainFragment extends BrowseSupportFragment {
         }
     }
 
+    public void loadPeople() {
+        if (api == null || token == null || token.isEmpty()) {
+            Log.e(TAG, "API未初始化");
+            return;
+        }
+
+        showLoadingOverlay("正在加载人物...");
+        String authx = FnAuthUtils.generateAuthX("/p/api/v1/ai-person/list", "GET", "getAll=true&limit=-1&orderBy=0");
+
+        api.getPersonList(token, authx, true, -1, 0).enqueue(new Callback<FnHttpApi.PersonListResponse>() {
+            @Override
+            public void onResponse(Call<FnHttpApi.PersonListResponse> call,
+                                   Response<FnHttpApi.PersonListResponse> response) {
+                hideLoadingOverlay();
+                if (response.isSuccessful() && response.body() != null) {
+                    FnHttpApi.PersonListResponse result = response.body();
+                    if (result.code == 0 && result.data != null && result.data.list != null) {
+                        displayPeople(result.data.list);
+                    } else {
+                        showEmptyState("暂无人物");
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<FnHttpApi.PersonListResponse> call, Throwable t) {
+                Log.e(TAG, "加载人物失败", t);
+                hideLoadingOverlay();
+                showEmptyState("加载失败");
+            }
+        });
+    }
+
+    private void displayPeople(List<FnHttpApi.PersonItem> persons) {
+        isPhotoListView = false;
+        timelineItems = null;
+        mRowsAdapter.clear();
+
+        int itemsPerRow = 6;
+        int totalRows = (int) Math.ceil((double) persons.size() / itemsPerRow);
+
+        for (int row = 0; row < totalRows; row++) {
+            int start = row * itemsPerRow;
+            int end = Math.min(start + itemsPerRow, persons.size());
+
+            HeaderItem header = row == 0 ? new HeaderItem("人物 (" + persons.size() + "人)") : null;
+            ArrayObjectAdapter rowAdapter = new ArrayObjectAdapter(mCardPresenter);
+
+            for (int i = start; i < end; i++) {
+                FnHttpApi.PersonItem person = persons.get(i);
+
+                String thumbUrl = person.faceId > 0 ? baseUrl + "/p/api/v1/stream/face/" + person.faceId : null;
+
+                MediaItem item = new MediaItem(
+                    String.valueOf(person.id),
+                    person.name,
+                    "person",
+                    thumbUrl,
+                    null
+                );
+                item.setPhotoCount(person.itemCount);
+                rowAdapter.add(item);
+            }
+
+            mRowsAdapter.add(new ListRow(header, rowAdapter));
+        }
+    }
+
+    public void loadPersonTimeline(int personId, String personName) {
+        if (api == null || token == null || token.isEmpty()) {
+            Log.e(TAG, "API未初始化");
+            return;
+        }
+
+        currentPersonId = personId;
+        currentPersonName = personName;
+        savedPersonTimelineItems = null;
+
+        showLoadingOverlay("正在加载 " + personName + " 的时间线...");
+        String authx = FnAuthUtils.generateAuthX("/p/api/v1/ai-person/photoLibrary/timeLine", "GET", "id=" + personId);
+
+        api.getPersonTimeline(token, authx, personId).enqueue(new Callback<FnHttpApi.PersonTimelineResponse>() {
+            @Override
+            public void onResponse(Call<FnHttpApi.PersonTimelineResponse> call,
+                                   Response<FnHttpApi.PersonTimelineResponse> response) {
+                hideLoadingOverlay();
+                if (response.isSuccessful() && response.body() != null) {
+                    FnHttpApi.PersonTimelineResponse result = response.body();
+                    if (result.code == 0 && result.data != null && result.data.list != null) {
+                        displayPersonTimeline(result.data.list);
+                    } else {
+                        showEmptyState(personName + " 暂无照片");
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<FnHttpApi.PersonTimelineResponse> call, Throwable t) {
+                Log.e(TAG, "加载人物时间线失败", t);
+                hideLoadingOverlay();
+                showEmptyState("加载失败");
+            }
+        });
+    }
+
+    private void displayPersonTimeline(List<FnHttpApi.PersonTimelineItem> items) {
+        isPhotoListView = false;
+        mRowsAdapter.clear();
+        savedPersonTimelineItems = new ArrayList<>(items);
+
+        String currentYearMonth = "";
+        ArrayObjectAdapter currentRowAdapter = null;
+
+        for (FnHttpApi.PersonTimelineItem item : items) {
+            String yearMonth = item.year + "年" + item.month + "月";
+            String dateStr = item.year + "-" + String.format("%02d", item.month) + "-" + String.format("%02d", item.day);
+            String title = item.month + "月" + item.day + "日";
+            String suffix = " (" + item.itemCount + "张)";
+
+            if (!yearMonth.equals(currentYearMonth)) {
+                currentYearMonth = yearMonth;
+                String headerTitle = currentPersonName != null ? currentPersonName + " - " + yearMonth : yearMonth;
+                HeaderItem header = new HeaderItem(headerTitle);
+                currentRowAdapter = new ArrayObjectAdapter(mCardPresenter);
+                mRowsAdapter.add(new ListRow(header, currentRowAdapter));
+            }
+
+            MediaItem mediaItem = new MediaItem(dateStr, title + suffix, item.itemCount);
+            mediaItem.setType("person_date");
+            currentRowAdapter.add(mediaItem);
+        }
+    }
+
+    public void loadPersonPhotosByDate(String dateStr, int itemCount) {
+        if (api == null || token == null || token.isEmpty() || currentPersonId < 0) {
+            Log.e(TAG, "API未初始化或未选择人物");
+            return;
+        }
+
+        showLoadingOverlay("正在加载照片...");
+
+        String dateTime = dateStr.replace("-", ":");
+        String startTime = dateTime + " 00:00:00";
+        String endTime = dateTime + " 23:59:59";
+        int limit = itemCount;
+        int offset = 0;
+
+        String params = "album_id=" + currentPersonId
+            + "&endTime=" + endTime
+            + "&end_time=" + endTime
+            + "&limit=" + limit
+            + "&offset=" + offset
+            + "&personId=" + currentPersonId
+            + "&startTime=" + startTime
+            + "&start_time=" + startTime;
+        String path = "/p/api/v1/ai-person/photoLibrary/list";
+        String authx = FnAuthUtils.generateAuthX(path, "GET", params);
+
+        api.getPersonPhotos(token, authx, currentPersonId, startTime, endTime, limit, offset, currentPersonId, startTime, endTime)
+            .enqueue(new Callback<FnHttpApi.GalleryListResponse>() {
+                @Override
+                public void onResponse(Call<FnHttpApi.GalleryListResponse> call,
+                                       Response<FnHttpApi.GalleryListResponse> response) {
+                    hideLoadingOverlay();
+                    if (response.isSuccessful() && response.body() != null) {
+                        FnHttpApi.GalleryListResponse result = response.body();
+                        if (result.code == 0 && result.data != null && result.data.list != null) {
+                            displayPersonPhotos(dateStr, result.data.list);
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<FnHttpApi.GalleryListResponse> call, Throwable t) {
+                    Log.e(TAG, "加载人物照片失败", t);
+                    hideLoadingOverlay();
+                }
+            });
+    }
+
+    private void displayPersonPhotos(String dateStr, List<FnHttpApi.GalleryPhoto> photos) {
+        isPhotoListView = true;
+        mRowsAdapter.clear();
+
+        String title = (currentPersonName != null ? currentPersonName : "") + " - " + dateStr + " (" + photos.size() + "张)";
+        HeaderItem header = new HeaderItem(title);
+        ArrayObjectAdapter rowAdapter = new ArrayObjectAdapter(mCardPresenter);
+
+        currentMediaList = new ArrayList<>();
+
+        for (FnHttpApi.GalleryPhoto photo : photos) {
+            String thumbUrl = null;
+            String mediaUrl = null;
+
+            if (photo.additional != null && photo.additional.thumbnail != null) {
+                FnHttpApi.GalleryThumbnail thumbnail = photo.additional.thumbnail;
+                thumbUrl = thumbnail.mUrl != null ? baseUrl + thumbnail.mUrl : (thumbnail.sUrl != null ? baseUrl + thumbnail.sUrl : null);
+                mediaUrl = thumbnail.originalUrl != null ? baseUrl + thumbnail.originalUrl : null;
+            }
+
+            MediaItem item = new MediaItem(
+                String.valueOf(photo.id),
+                photo.fileName,
+                photo.category,
+                thumbUrl,
+                mediaUrl
+            );
+            currentMediaList.add(item);
+            rowAdapter.add(item);
+        }
+
+        mRowsAdapter.add(new ListRow(header, rowAdapter));
+    }
+
     private void openMediaDetail(MediaItem mediaItem) {
         if (currentMediaList == null || currentMediaList.isEmpty()) {
             currentMediaList = new ArrayList<>();
@@ -1068,8 +1377,8 @@ public class MainFragment extends BrowseSupportFragment {
             }
         }
 
+        MediaListHolder.set(currentMediaList);
         Intent intent = new Intent(getActivity(), MediaDetailActivity.class);
-        intent.putExtra("MEDIA_LIST", new ArrayList<>(currentMediaList));
         intent.putExtra("CURRENT_INDEX", index);
         startActivity(intent);
     }
@@ -1093,5 +1402,9 @@ public class MainFragment extends BrowseSupportFragment {
         super.onDestroy();
         lazyLoadHandler.removeCallbacksAndMessages(null);
         positionHandler.removeCallbacksAndMessages(null);
+        if (tokenChangeListener != null && getActivity() != null) {
+            getActivity().getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE)
+                .unregisterOnSharedPreferenceChangeListener(tokenChangeListener);
+        }
     }
 }

@@ -1,6 +1,6 @@
 # fnPhoto TV
 
-An Android TV application for browsing photos and videos from Feiniu NAS (fnOS) photo gallery.
+An Android TV application for browsing photos and videos from FN NAS (fnOS) photo gallery.
 
 ## Features
 
@@ -18,10 +18,6 @@ An Android TV application for browsing photos and videos from Feiniu NAS (fnOS) 
 - Android TV or Android device with API level 19+ (Android 4.4)
 - Feiniu NAS (fnOS) running photo gallery service
 - Network access to your NAS (same LAN)
-
-## Limitations
-
-- **FN Connect Only**: The cloud API requires TLS 1.2+. On API 19 (Android 4.4), Conscrypt is bundled to provide modern TLS support.
 
 ## Installation
 

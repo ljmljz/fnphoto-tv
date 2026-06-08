@@ -13,6 +13,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.core.view.GravityCompat;
@@ -33,6 +34,7 @@ public class MainActivity extends FragmentActivity {
     private DrawerLayout drawerLayout;
     private VerticalGridView menuGrid;
     private MenuAdapter menuAdapter;
+    private TextView tvMode;
     private FnHttpApi api;
     private String token;
     private String secret;
@@ -138,6 +140,9 @@ public class MainActivity extends FragmentActivity {
         // 添加 MainFragment
         setupMainFragment();
 
+        // 设置初始模式
+        setModeText("图库");
+
         // 初始化 API 并获取相册应用版本
         initApiAndGetVersion();
     }
@@ -145,6 +150,7 @@ public class MainActivity extends FragmentActivity {
     private void setupSideMenu() {
         drawerLayout = findViewById(R.id.drawer_layout);
         menuGrid = findViewById(R.id.menu_grid);
+        tvMode = findViewById(R.id.tv_current_mode);
 
         // 设置菜单适配器
         menuAdapter = new MenuAdapter();
@@ -194,8 +200,30 @@ public class MainActivity extends FragmentActivity {
                 .commit();
     }
 
+    private void setModeText(String mode) {
+        if (tvMode != null) tvMode.setText(mode);
+    }
+
+    public void showLoading(String message) {
+        LinearLayout overlay = findViewById(R.id.loading_overlay);
+        if (overlay != null) {
+            TextView tv = overlay.findViewById(R.id.tv_loading_text);
+            if (tv != null && message != null) tv.setText(message);
+            overlay.setVisibility(View.VISIBLE);
+            overlay.bringToFront();
+        }
+    }
+
+    public void hideLoading() {
+        LinearLayout overlay = findViewById(R.id.loading_overlay);
+        if (overlay != null) {
+            overlay.setVisibility(View.GONE);
+        }
+    }
+
     private void handleMenuSelection(MenuItem item) {
         Log.d(TAG, "Menu selected: " + item.getAction());
+        setModeText(item.getTitle());
         
         switch (item.getAction()) {
             case "gallery":
@@ -216,6 +244,9 @@ public class MainActivity extends FragmentActivity {
             case "places":
                 loadPlaces();
                 break;
+            case "people":
+                loadPeople();
+                break;
             case "search":
                 openSearch();
                 return;
@@ -226,7 +257,6 @@ public class MainActivity extends FragmentActivity {
                 logout();
                 return;
             case "map":
-            case "people":
             case "tags":
             case "smart":
             case "media_types":
@@ -448,6 +478,14 @@ public class MainActivity extends FragmentActivity {
                 .findFragmentById(R.id.main_content_container);
         if (fragment != null) {
             fragment.loadPlaces();
+        }
+    }
+
+    private void loadPeople() {
+        MainFragment fragment = (MainFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.main_content_container);
+        if (fragment != null) {
+            fragment.loadPeople();
         }
     }
 }

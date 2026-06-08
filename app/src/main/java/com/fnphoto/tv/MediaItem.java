@@ -50,6 +50,8 @@ public class MediaItem implements Serializable {
     public List<String> getPreviewThumbUrls() { return previewThumbUrls; }
     public void setPreviewThumbUrls(List<String> previewThumbUrls) { this.previewThumbUrls = previewThumbUrls; }
     public void setDateStr(String dateStr) { this.dateStr = dateStr; }
+    public void setPhotoCount(int photoCount) { this.photoCount = photoCount; }
+    public void setType(String type) { this.type = type; }
     
     @Override
     public boolean equals(Object obj) {

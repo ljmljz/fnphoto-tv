@@ -160,14 +160,12 @@ public class FnWebSocketClient {
                     rawData.put("si", si);  // Must be String, not Long
                     
                     final String rawDataStr = rawData.toString();
-                    android.util.Log.d("FnWebSocket", "Raw data: " + rawDataStr);
+                    android.util.Log.d("FnWebSocket", "Login request prepared (data suppressed for security)");
 
                     // 2. Generate AES key (MUST be 32 chars for fnOS) and IV (16 bytes)
                     // Reference: fnnas-api/sdk/base_client.py line 32 - generate_random_string(32)
                     final String aesKey = FnProtocolUtils.generateRandomString(32);
                     final byte[] iv = FnProtocolUtils.generateIV();
-                    android.util.Log.d("FnWebSocket", "AES key (32 chars): " + aesKey);
-                    android.util.Log.d("FnWebSocket", "IV generated: " + Base64.encodeToString(iv, Base64.NO_WRAP));
 
                     // 3. Encrypt
                     final String aesEncrypted = FnProtocolUtils.aesEncrypt(rawDataStr, aesKey, iv);

@@ -84,6 +84,12 @@ public class SearchActivity extends FragmentActivity {
         api = retrofit.create(FnHttpApi.class);
 
         initViews();
+
+        String extraQuery = getIntent().getStringExtra("EXTRA_QUERY");
+        if (extraQuery != null && !extraQuery.isEmpty()) {
+            editSearch.setText(extraQuery);
+            performSearch(extraQuery);
+        }
     }
 
     private void initViews() {
@@ -300,8 +306,8 @@ public class SearchActivity extends FragmentActivity {
         );
         mediaItems.add(item);
 
+        MediaListHolder.set(mediaItems);
         Intent intent = new Intent(this, MediaDetailActivity.class);
-        intent.putExtra("MEDIA_LIST", new ArrayList<>(mediaItems));
         intent.putExtra("CURRENT_INDEX", 0);
         startActivity(intent);
     }

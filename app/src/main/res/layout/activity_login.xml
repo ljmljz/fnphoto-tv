@@ -44,6 +44,7 @@
             android:padding="14dp"
             android:textColor="@android:color/black"
             android:textColorHint="?android:attr/textColorHintInverse"
+            android:textCursorDrawable="@drawable/cursor_blue"
             android:textSize="17sp"
             android:imeOptions="actionNext">
 
@@ -64,6 +65,7 @@
             android:padding="14dp"
             android:textColor="@android:color/black"
             android:textColorHint="?android:attr/textColorHintInverse"
+            android:textCursorDrawable="@drawable/cursor_blue"
             android:textSize="17sp"
             android:imeOptions="actionNext" />
 
@@ -81,6 +83,7 @@
             android:padding="14dp"
             android:textColor="@android:color/black"
             android:textColorHint="?android:attr/textColorHintInverse"
+            android:textCursorDrawable="@drawable/cursor_blue"
             android:textSize="17sp"
             android:imeOptions="actionDone" />
 

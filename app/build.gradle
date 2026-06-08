@@ -30,10 +30,20 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
+    signingConfigs {
+        release {
+            storeFile file('keystore.jks')
+            storePassword 'fnphoto123'
+            keyAlias 'fnphoto'
+            keyPassword 'fnphoto123'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
@@ -75,4 +85,8 @@ dependencies {
 
     // Conscrypt - 现代 TLS 支持 (为 API 19 替换系统 SSL)
     implementation 'org.conscrypt:conscrypt-android:2.5.2'
+
+    // Test dependencies
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20230227'
 }

@@ -1,6 +1,7 @@
 package com.fnphoto.tv.cache;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
@@ -18,6 +19,11 @@ import java.io.File;
 
 public class CachedImageLoader {
     private static final String TAG = "CachedImageLoader";
+
+    private static String getFreshToken(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences("fn_photo_prefs", Context.MODE_PRIVATE);
+        return prefs.getString("api_token", "");
+    }
     
     public interface ImageLoadCallback {
         void onBitmapLoaded(Bitmap bitmap);
@@ -83,10 +89,11 @@ public class CachedImageLoader {
                                         int width, int height, ImageLoadCallback callback) {
         Log.d(TAG, "Loading from network: " + url);
         
+        String freshToken = getFreshToken(context);
         ImageCacheManager cacheManager = ImageCacheManager.getInstance(context);
         
         GlideUrl glideUrl = new GlideUrl(url, new LazyHeaders.Builder()
-                .addHeader("accesstoken", token)
+                .addHeader("accesstoken", freshToken)
                 .build());
         
         Glide.with(context)
@@ -117,6 +124,7 @@ public class CachedImageLoader {
      */
     public static void loadIntoImageView(android.widget.ImageView imageView, String url, String token) {
         Context context = imageView.getContext();
+        String freshToken = getFreshToken(context);
         ImageCacheManager cacheManager = ImageCacheManager.getInstance(context);
         
         // 检查缓存文件
@@ -130,7 +138,7 @@ public class CachedImageLoader {
         } else {
             // 从网络加载
             GlideUrl glideUrl = new GlideUrl(url, new LazyHeaders.Builder()
-                    .addHeader("accesstoken", token)
+                    .addHeader("accesstoken", freshToken)
                     .build());
             
             Glide.with(context)
@@ -150,12 +158,13 @@ public class CachedImageLoader {
      * 预加载图片到缓存
      */
     public static void preloadImage(Context context, String url, String token) {
+        String freshToken = getFreshToken(context);
         ImageCacheManager cacheManager = ImageCacheManager.getInstance(context);
         
         // 如果缓存不存在，从网络加载并缓存
         if (!cacheManager.isCacheValid(url)) {
             GlideUrl glideUrl = new GlideUrl(url, new LazyHeaders.Builder()
-                    .addHeader("accesstoken", token)
+                    .addHeader("accesstoken", freshToken)
                     .build());
             
             Glide.with(context)
