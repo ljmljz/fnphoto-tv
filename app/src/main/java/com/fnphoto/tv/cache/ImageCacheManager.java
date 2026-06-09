@@ -35,6 +35,16 @@ public class ImageCacheManager {
         cacheDir = new File(context.getCacheDir(), CACHE_DIR);
         if (!cacheDir.exists()) {
             cacheDir.mkdirs();
+        } else {
+            // 清理旧版 PNG 缓存
+            File[] files = cacheDir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (f.getName().endsWith(".png")) {
+                        f.delete();
+                    }
+                }
+            }
         }
         executorService = Executors.newFixedThreadPool(4);
     }
@@ -86,8 +96,8 @@ public class ImageCacheManager {
                 File cacheFile = new File(cacheDir, fileName);
                 
                 FileOutputStream fos = new FileOutputStream(cacheFile);
-                // 压缩保存为PNG，质量100%
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                // 照片类用JPEG压缩，体积小且兼容性好
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 88, fos);
                 fos.close();
                 
                 Log.d(TAG, "Saved to cache: " + url + " (" + cacheFile.length() / 1024 + "KB)");
@@ -204,10 +214,10 @@ public class ImageCacheManager {
             for (byte b : hash) {
                 sb.append(String.format("%02x", b));
             }
-            return sb.toString() + ".png";
+            return sb.toString() + ".jpg";
         } catch (NoSuchAlgorithmException e) {
             // 如果MD5不可用，使用URL的hashCode
-            return String.valueOf(url.hashCode()) + ".png";
+            return String.valueOf(url.hashCode()) + ".jpg";
         }
     }
     

@@ -116,10 +116,3 @@ MIT 协议 — 详见 LICENSE 文件
 ## 贡献指南
 
 欢迎提交 Pull Request。重大变更请先提交 issue 讨论。
-
-## 常见问题
-
-- **连接失败**：确保电视和 NAS 在同一局域网，或 FN Connect 可访问
-- **认证失败**：检查用户名和密码是否正确
-- **照片无法加载**：确认电视能够访问照片流地址
-- **API 19 TLS 错误**：已内置 Conscrypt；若证书有问题，从 https://curl.se/ca/cacert.pem 更新 `res/raw/cacert.pem`

@@ -32,6 +32,7 @@ import com.fnphoto.tv.api.FnAuthUtils;
 import com.fnphoto.tv.api.FnHttpApi;
 import com.fnphoto.tv.api.HttpClientProvider;
 import com.fnphoto.tv.cache.CachedImageLoader;
+import com.fnphoto.tv.cache.ImageCacheManager;
 import com.fnphoto.tv.player.AuthenticatedHttpDataSourceFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -180,11 +181,22 @@ public class MediaDetailActivity extends FragmentActivity {
         imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
         container.addView(imageView);
 
-        String mediaUrl = item.getMediaUrl();
-        if (mediaUrl != null && !mediaUrl.isEmpty()) {
-            int screenWidth = getResources().getDisplayMetrics().widthPixels;
-            int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
 
+        // 保持加载动画在最上层
+        if (loadingIndicator != null) {
+            loadingIndicator.bringToFront();
+        }
+
+        String mediaUrl = item.getMediaUrl();
+
+        // 检查原图是否已有缓存
+        ImageCacheManager cacheManager = ImageCacheManager.getInstance(this);
+        boolean originalCached = mediaUrl != null && !mediaUrl.isEmpty() && cacheManager.isCacheValid(mediaUrl);
+
+        if (originalCached) {
+            // 原图已缓存：直接加载，不要缩略图占位
             CachedImageLoader.loadImage(this, mediaUrl, token, screenWidth, screenHeight,
                     new CachedImageLoader.ImageLoadCallback() {
                         @Override
@@ -192,16 +204,82 @@ public class MediaDetailActivity extends FragmentActivity {
                             hideLoading();
                             imageView.setImageBitmap(bitmap);
                         }
-
                         @Override
                         public void onLoadFailed() {
                             hideLoading();
                             Toast.makeText(MediaDetailActivity.this, "图片加载失败", Toast.LENGTH_SHORT).show();
                         }
                     });
+        } else {
+            // 原图未缓存：先显示缩略图占位，加载动画保持在最上层
+            String thumbUrl = item.getThumbnailUrl();
+            if (thumbUrl != null && !thumbUrl.isEmpty()) {
+                CachedImageLoader.loadImage(this, thumbUrl, token, screenWidth, screenHeight,
+                        new CachedImageLoader.ImageLoadCallback() {
+                            @Override
+                            public void onBitmapLoaded(Bitmap bitmap) {
+                                imageView.setImageBitmap(bitmap);
+                                // 缩略图设完后，重新把加载动画置于最上层
+                                if (loadingIndicator != null) {
+                                    loadingIndicator.bringToFront();
+                                }
+                            }
+                            @Override
+                            public void onLoadFailed() {}
+                        });
+            }
+
+            if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                CachedImageLoader.loadImage(this, mediaUrl, token, screenWidth, screenHeight,
+                        new CachedImageLoader.ImageLoadCallback() {
+                            @Override
+                            public void onBitmapLoaded(Bitmap bitmap) {
+                                hideLoading();
+                                imageView.setImageBitmap(bitmap);
+                            }
+                            @Override
+                            public void onLoadFailed() {
+                                hideLoading();
+                                Toast.makeText(MediaDetailActivity.this, "图片加载失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+            }
         }
 
         imageView.setOnClickListener(v -> finish());
+
+        // 预加载前后照片
+        preloadAdjacentPhotos();
+    }
+
+    private void preloadAdjacentPhotos() {
+        if (mediaList == null) return;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int preloadRange = 2;
+
+        int start = Math.max(0, currentIndex - 1);
+        int end = Math.min(mediaList.size(), currentIndex + preloadRange + 1);
+        for (int idx = start; idx < end; idx++) {
+            if (idx == currentIndex) continue;
+            final int preloadIdx = idx;
+            MediaItem item = mediaList.get(preloadIdx);
+            String url = item.getMediaUrl();
+            if (url != null && !url.isEmpty()) {
+                ImageCacheManager cacheManager = ImageCacheManager.getInstance(this);
+                if (!cacheManager.isCacheValid(url)) {
+                    CachedImageLoader.loadImage(this, url, token, screenWidth, screenHeight,
+                            new CachedImageLoader.ImageLoadCallback() {
+                                @Override
+                                public void onBitmapLoaded(Bitmap bitmap) {
+                                    Log.d(TAG, "Preloaded photo " + preloadIdx + ": " + url);
+                                }
+                                @Override
+                                public void onLoadFailed() {}
+                            });
+                }
+            }
+        }
     }
 
     private void showVideoPreview(MediaItem item) {

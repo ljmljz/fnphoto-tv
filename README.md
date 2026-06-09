@@ -116,10 +116,3 @@ MIT License — See LICENSE file for details
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## Troubleshooting
-
-- **Connection Issues**: Ensure your TV and NAS are on the same network, or that FN Connect is reachable
-- **Authentication Failed**: Check your username and password
-- **Photos Not Loading**: Verify the photo stream URL is accessible from your TV
-- **TLS Errors on API 19**: Conscrypt provider is bundled; if CA issues occur, update `res/raw/cacert.pem` from https://curl.se/ca/cacert.pem

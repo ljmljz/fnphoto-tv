@@ -69,6 +69,10 @@ public class MainFragment extends BrowseSupportFragment {
     private int currentPersonId = -1;
     private String currentPersonName;
     private List<FnHttpApi.PersonTimelineItem> savedPersonTimelineItems;
+    private List<MediaItem> personDateItems = new ArrayList<>();
+    private List<FnHttpApi.PersonTimelineItem> personTimelineItemsList = new ArrayList<>();
+    private Set<Integer> personLoadedIdx = new HashSet<>();
+    private int personLastVisibleIdx = -1;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -153,11 +157,18 @@ public class MainFragment extends BrowseSupportFragment {
             @Override
             public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item,
                                        RowPresenter.ViewHolder rowViewHolder, Row row) {
-                if (item instanceof MediaItem && ((MediaItem) item).getType().equals("date")) {
-                    // 找到选中项的索引
-                    int selectedIndex = allDateItems.indexOf(item);
-                    if (selectedIndex >= 0) {
-                        scheduleLazyLoad(selectedIndex);
+                if (item instanceof MediaItem) {
+                    MediaItem mi = (MediaItem) item;
+                    if ("date".equals(mi.getType())) {
+                        int selectedIndex = allDateItems.indexOf(item);
+                        if (selectedIndex >= 0) {
+                            scheduleLazyLoad(selectedIndex);
+                        }
+                    } else if ("person_date".equals(mi.getType())) {
+                        int selectedIndex = personDateItems.indexOf(item);
+                        if (selectedIndex >= 0) {
+                            schedulePersonLazyLoad(selectedIndex);
+                        }
                     }
                 }
             }
@@ -247,6 +258,10 @@ public class MainFragment extends BrowseSupportFragment {
             Log.d(TAG, "Returning from person timeline to person list");
             currentPersonId = -1;
             currentPersonName = null;
+            if (savedPersonList != null) {
+                displayPeople(savedPersonList);
+                return true;
+            }
             return false;
         }
         return false;
@@ -624,6 +639,102 @@ public class MainFragment extends BrowseSupportFragment {
             });
     }
 
+    private void schedulePersonLazyLoad(int centerIndex) {
+        personLastVisibleIdx = centerIndex;
+        lazyLoadHandler.removeCallbacksAndMessages(null);
+        lazyLoadHandler.postDelayed(() -> {
+            if (centerIndex == personLastVisibleIdx) {
+                loadVisiblePersonPreviews(centerIndex);
+            }
+        }, PREVIEW_LOAD_DELAY);
+    }
+
+    private void loadVisiblePersonPreviews(int centerIndex) {
+        if (personDateItems.isEmpty() || personTimelineItemsList.isEmpty()) return;
+
+        int start = Math.max(0, centerIndex - VISIBLE_RANGE_BUFFER);
+        int end = Math.min(personDateItems.size(), centerIndex + VISIBLE_RANGE_BUFFER + 1);
+
+        for (int i = start; i < end; i++) {
+            if (!personLoadedIdx.contains(i)) {
+                personLoadedIdx.add(i);
+                final MediaItem mediaItem = personDateItems.get(i);
+                final FnHttpApi.PersonTimelineItem personItem = personTimelineItemsList.get(i);
+
+                if (personItem.itemCount > 0) {
+                    if (mediaItem.getPreviewThumbUrls() != null && !mediaItem.getPreviewThumbUrls().isEmpty()) {
+                        notifyItemChanged(mediaItem);
+                    } else {
+                        loadPersonDatePreviewThumbnails(mediaItem, personItem, () -> {
+                            notifyItemChanged(mediaItem);
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    private void loadPersonDatePreviewThumbnails(final MediaItem mediaItem,
+                                                  final FnHttpApi.PersonTimelineItem personItem,
+                                                  final Runnable onComplete) {
+        if (api == null || token == null || token.isEmpty() || currentPersonId < 0) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+
+        String dateStr = mediaItem.getDateStr();
+        String dateTime = dateStr.replace("-", ":");
+        String startTime = dateTime + " 00:00:00";
+        String endTime = dateTime + " 23:59:59";
+        int limit = Math.min(personItem.itemCount, 4);
+
+        String params = "album_id=" + currentPersonId
+            + "&endTime=" + endTime
+            + "&end_time=" + endTime
+            + "&limit=" + limit
+            + "&offset=0"
+            + "&personId=" + currentPersonId
+            + "&startTime=" + startTime
+            + "&start_time=" + startTime;
+        String path = "/p/api/v1/ai-person/photoLibrary/list";
+        String authx = FnAuthUtils.generateAuthX(path, "GET", params);
+
+        api.getPersonPhotos(token, authx, currentPersonId, startTime, endTime, limit, 0, currentPersonId, startTime, endTime)
+            .enqueue(new Callback<FnHttpApi.GalleryListResponse>() {
+                @Override
+                public void onResponse(Call<FnHttpApi.GalleryListResponse> call,
+                                       Response<FnHttpApi.GalleryListResponse> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        FnHttpApi.GalleryListResponse result = response.body();
+                        if (result.code == 0 && result.data != null && result.data.list != null) {
+                            List<String> thumbUrls = new ArrayList<>();
+                            for (FnHttpApi.GalleryPhoto photo : result.data.list) {
+                                if (photo.additional != null && photo.additional.thumbnail != null) {
+                                    String thumbUrl = photo.additional.thumbnail.mUrl;
+                                    if (thumbUrl == null) {
+                                        thumbUrl = photo.additional.thumbnail.sUrl;
+                                    }
+                                    if (thumbUrl != null) {
+                                        if (!thumbUrl.startsWith("http") && baseUrl != null) {
+                                            thumbUrl = baseUrl + thumbUrl;
+                                        }
+                                        thumbUrls.add(thumbUrl);
+                                    }
+                                }
+                            }
+                            mediaItem.setPreviewThumbUrls(thumbUrls);
+                        }
+                    }
+                    if (onComplete != null) onComplete.run();
+                }
+
+                @Override
+                public void onFailure(Call<FnHttpApi.GalleryListResponse> call, Throwable t) {
+                    if (onComplete != null) onComplete.run();
+                }
+            });
+    }
+
     public void loadPhotosByDate(String dateStr, int itemCount) {
         // 保存时间线的滚动位置
         saveTimelinePosition();
@@ -909,6 +1020,7 @@ public class MainFragment extends BrowseSupportFragment {
 
     private List<FnHttpApi.NewAlbum> savedAlbumList;
     private List<FnHttpApi.GeoItem> savedPlacesList;
+    private List<FnHttpApi.PersonItem> savedPersonList;
 
     private void loadAlbumPhotosPage(final String albumName, final int albumId,
                                      final int offset, final List<FnHttpApi.GalleryPhoto> allPhotos) {
@@ -1185,6 +1297,7 @@ public class MainFragment extends BrowseSupportFragment {
     private void displayPeople(List<FnHttpApi.PersonItem> persons) {
         isPhotoListView = false;
         timelineItems = null;
+        savedPersonList = new ArrayList<>(persons);
         mRowsAdapter.clear();
 
         int itemsPerRow = 6;
@@ -1258,6 +1371,9 @@ public class MainFragment extends BrowseSupportFragment {
         isPhotoListView = false;
         mRowsAdapter.clear();
         savedPersonTimelineItems = new ArrayList<>(items);
+        personDateItems.clear();
+        personTimelineItemsList.clear();
+        personLoadedIdx.clear();
 
         String currentYearMonth = "";
         ArrayObjectAdapter currentRowAdapter = null;
@@ -1279,7 +1395,14 @@ public class MainFragment extends BrowseSupportFragment {
             MediaItem mediaItem = new MediaItem(dateStr, title + suffix, item.itemCount);
             mediaItem.setType("person_date");
             currentRowAdapter.add(mediaItem);
+            personDateItems.add(mediaItem);
+            personTimelineItemsList.add(item);
         }
+
+        // 触发第一个可见区域的预览加载
+        lazyLoadHandler.postDelayed(() -> {
+            loadVisiblePersonPreviews(0);
+        }, 300);
     }
 
     public void loadPersonPhotosByDate(String dateStr, int itemCount) {
