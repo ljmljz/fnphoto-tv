@@ -2,26 +2,33 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="4dp"
+    android:background="@drawable/bg_photo_tile"
     android:focusable="true"
     android:focusableInTouchMode="true"
-    android:background="@drawable/menu_item_background">
+    android:padding="3dp">
 
     <ImageView
         android:id="@+id/iv_photo"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:scaleType="centerCrop"
-        android:background="#333333" />
+        android:layout_height="118dp"
+        android:background="@color/surface_raised"
+        android:scaleType="centerCrop" />
 
     <!-- 视频指示器 -->
-    <View
+    <TextView
         android:id="@+id/v_video_indicator"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="8dp"
-        android:background="@android:drawable/ic_media_play"
+        android:layout_margin="6dp"
+        android:background="@drawable/bg_badge"
+        android:paddingStart="7dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="7dp"
+        android:paddingBottom="2dp"
+        android:text="视频"
+        android:textColor="#FFFFFF"
+        android:textSize="10sp"
         android:visibility="gone" />
 
 </FrameLayout>

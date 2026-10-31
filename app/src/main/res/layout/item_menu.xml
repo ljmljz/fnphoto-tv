@@ -4,16 +4,21 @@
     android:layout_height="wrap_content"
     android:focusable="true"
     android:focusableInTouchMode="true"
-    android:padding="16dp">
+    android:paddingStart="10dp"
+    android:paddingTop="3dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="3dp">
 
     <TextView
         android:id="@+id/menu_text"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="20sp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_menu_item"
+        android:fontFamily="sans-serif"
         android:gravity="start|center_vertical"
-        android:padding="12dp"
-        android:background="@drawable/menu_item_background" />
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp" />
 
 </FrameLayout>

@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.text.TextUtils;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -107,22 +109,26 @@ public class FolderBrowseActivity extends FragmentActivity {
         rootLayout.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
-        rootLayout.setBackgroundColor(Color.parseColor("#0a0a0c"));
+        rootLayout.setBackgroundColor(Color.parseColor("#0B0C0F"));
 
         // 标题栏
         tvTitle = new TextView(this);
-        tvTitle.setText(currentFolderName != null ? currentFolderName : "浏览文件夹");
-        tvTitle.setTextColor(Color.WHITE);
-        tvTitle.setTextSize(24);
-        tvTitle.setPadding(32, 24, 32, 16);
+        tvTitle.setText(currentFolderName != null ? currentFolderName : "文件夹");
+        tvTitle.setTextColor(Color.parseColor("#F2F4F8"));
+        tvTitle.setTextSize(34);
+        tvTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        tvTitle.setLetterSpacing(0.01f);
+        tvTitle.setSingleLine(true);
+        tvTitle.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        tvTitle.setPadding(dp(64), dp(40), dp(64), 0);
         rootLayout.addView(tvTitle);
 
         // 加载提示
         tvLoading = new TextView(this);
         tvLoading.setText("加载中...");
-        tvLoading.setTextColor(Color.parseColor("#9ca3af"));
-        tvLoading.setTextSize(18);
-        tvLoading.setPadding(32, 16, 32, 16);
+        tvLoading.setTextColor(Color.parseColor("#A8AFBF"));
+        tvLoading.setTextSize(14);
+        tvLoading.setPadding(dp(64), dp(14), dp(64), dp(6));
         rootLayout.addView(tvLoading);
 
         // 内容区域
@@ -135,9 +141,11 @@ public class FolderBrowseActivity extends FragmentActivity {
         // 文件夹列表区域
         TextView tvFoldersTitle = new TextView(this);
         tvFoldersTitle.setText("子文件夹");
-        tvFoldersTitle.setTextColor(Color.parseColor("#9ca3af"));
-        tvFoldersTitle.setTextSize(18);
-        tvFoldersTitle.setPadding(32, 16, 32, 8);
+        tvFoldersTitle.setTextColor(Color.parseColor("#6E7686"));
+        tvFoldersTitle.setTextSize(12);
+        tvFoldersTitle.setLetterSpacing(0.14f);
+        tvFoldersTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        tvFoldersTitle.setPadding(dp(70), dp(24), dp(64), dp(8));
         tvFoldersTitle.setVisibility(View.GONE);
         tvFoldersTitle.setTag("folders_title");
         layoutContent.addView(tvFoldersTitle);
@@ -146,7 +154,8 @@ public class FolderBrowseActivity extends FragmentActivity {
         rvFolders.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        rvFolders.setPadding(16, 8, 16, 8);
+        rvFolders.setPadding(dp(56), dp(4), dp(56), dp(4));
+        rvFolders.setClipToPadding(false);
         rvFolders.setVisibility(View.GONE);
         folderAdapter = new FolderAdapter();
         rvFolders.setAdapter(folderAdapter);
@@ -155,9 +164,11 @@ public class FolderBrowseActivity extends FragmentActivity {
         // 照片墙区域
         TextView tvPhotosTitle = new TextView(this);
         tvPhotosTitle.setText("照片和视频");
-        tvPhotosTitle.setTextColor(Color.parseColor("#9ca3af"));
-        tvPhotosTitle.setTextSize(18);
-        tvPhotosTitle.setPadding(32, 16, 32, 8);
+        tvPhotosTitle.setTextColor(Color.parseColor("#6E7686"));
+        tvPhotosTitle.setTextSize(12);
+        tvPhotosTitle.setLetterSpacing(0.14f);
+        tvPhotosTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        tvPhotosTitle.setPadding(dp(70), dp(24), dp(64), dp(8));
         tvPhotosTitle.setVisibility(View.GONE);
         tvPhotosTitle.setTag("photos_title");
         layoutContent.addView(tvPhotosTitle);
@@ -166,7 +177,8 @@ public class FolderBrowseActivity extends FragmentActivity {
         rvPhotos.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        rvPhotos.setPadding(16, 8, 16, 16);
+        rvPhotos.setPadding(dp(56), dp(4), dp(56), dp(32));
+        rvPhotos.setClipToPadding(false);
         rvPhotos.setVisibility(View.GONE);
         photoAdapter = new PhotoGridAdapter();
         rvPhotos.setAdapter(photoAdapter);
@@ -174,6 +186,10 @@ public class FolderBrowseActivity extends FragmentActivity {
 
         rootLayout.addView(layoutContent);
         setContentView(rootLayout);
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void initApi() {
@@ -362,7 +378,7 @@ public class FolderBrowseActivity extends FragmentActivity {
 
                 itemView.setOnFocusChangeListener((v, hasFocus) -> {
                     if (hasFocus) {
-                        v.setBackgroundResource(R.drawable.menu_item_focused);
+                        v.setBackgroundResource(R.drawable.bg_menu_item);
                     } else {
                         v.setBackgroundResource(0);
                     }
@@ -419,7 +435,7 @@ public class FolderBrowseActivity extends FragmentActivity {
 
                 itemView.setOnFocusChangeListener((v, hasFocus) -> {
                     if (hasFocus) {
-                        v.setBackgroundResource(R.drawable.menu_item_focused);
+                        v.setBackgroundResource(R.drawable.bg_menu_item);
                     } else {
                         v.setBackgroundResource(0);
                     }

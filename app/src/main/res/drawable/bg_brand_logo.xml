@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 渐变底座 -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp" />
+            <gradient
+                android:angle="315"
+                android:startColor="#6D7CFF"
+                android:endColor="#9B6BFF" />
+        </shape>
+    </item>
+
+    <!-- 镜头环 -->
+    <item
+        android:bottom="14dp"
+        android:left="14dp"
+        android:right="14dp"
+        android:top="14dp">
+        <shape android:shape="oval">
+            <solid android:color="#00000000" />
+            <stroke
+                android:width="2dp"
+                android:color="#D9FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- 镜头芯 -->
+    <item
+        android:bottom="26dp"
+        android:left="26dp"
+        android:right="26dp"
+        android:top="26dp">
+        <shape android:shape="oval">
+            <solid android:color="#F2FFFFFF" />
+        </shape>
+    </item>
+
+</layer-list>

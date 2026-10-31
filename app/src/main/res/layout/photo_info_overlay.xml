@@ -2,7 +2,11 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="48dp">
+    android:background="#F20B0C0F"
+    android:paddingStart="72dp"
+    android:paddingTop="56dp"
+    android:paddingEnd="72dp"
+    android:paddingBottom="56dp">
 
     <TextView
         android:id="@+id/tv_info_content"
@@ -10,8 +14,8 @@
         android:layout_height="wrap_content"
         android:focusable="true"
         android:focusableInTouchMode="true"
-        android:lineSpacingExtra="6dp"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp" />
+        android:lineSpacingExtra="7dp"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp" />
 
 </ScrollView>

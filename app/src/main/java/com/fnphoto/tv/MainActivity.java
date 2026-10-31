@@ -89,7 +89,7 @@ public class MainActivity extends FragmentActivity {
             holder.itemView.setOnFocusChangeListener((v, hasFocus) -> {
                 if (hasFocus) {
                     selectedPosition = position;
-                    v.setBackgroundResource(R.drawable.menu_item_focused);
+                    v.setBackgroundResource(R.drawable.bg_menu_item);
                 } else {
                     v.setBackgroundResource(0);
                 }
@@ -161,7 +161,7 @@ public class MainActivity extends FragmentActivity {
         menuAdapter.add(new MenuItem("文件夹", "folders"));
         menuAdapter.add(new MenuItem("收藏", "favorites"));
         menuAdapter.add(new MenuItem("最近添加", "recent"));
-        menuAdapter.add(new MenuItem("🔍 搜索", "search"));
+        menuAdapter.add(new MenuItem("搜索", "search"));
         
         // 第二组：相册分类
         menuAdapter.add(new MenuItem("相册", "albums"));
@@ -183,8 +183,14 @@ public class MainActivity extends FragmentActivity {
         menuGrid.setWindowAlignmentOffset(48);
         menuGrid.setWindowAlignmentOffsetPercent(VerticalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED);
 
-        // 禁用滑动打开菜单，只允许通过按键打开
-        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
+        // 顶栏「浏览」按钮打开导航面板
+        View menuButton = findViewById(R.id.btn_menu);
+        if (menuButton != null) {
+            menuButton.setOnClickListener(v -> {
+                drawerLayout.openDrawer(GravityCompat.END);
+                menuGrid.requestFocus();
+            });
+        }
     }
 
     private void setupMainFragment() {

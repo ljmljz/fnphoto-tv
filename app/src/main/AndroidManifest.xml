@@ -19,12 +19,13 @@
         android:label="fnPhoto TV"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Leanback"
+        android:theme="@style/Theme.FnPhotoTV"
         android:usesCleartextTraffic="true"
         android:banner="@drawable/app_icon">
         
         <activity
             android:name=".LoginActivity"
+            android:windowSoftInputMode="stateAlwaysHidden|adjustPan"
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -55,8 +56,9 @@
             android:name=".SettingsActivity"
             android:screenOrientation="landscape" />
             
-        <activity 
+        <activity
             android:name=".SearchActivity"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 </manifest>

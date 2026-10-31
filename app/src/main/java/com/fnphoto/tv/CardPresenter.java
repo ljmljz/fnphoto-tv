@@ -5,13 +5,18 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
@@ -54,28 +59,69 @@ public class CardPresenter extends Presenter {
         ImageCardView cardView = new ImageCardView(parent.getContext());
         cardView.setFocusable(true);
         cardView.setFocusableInTouchMode(true);
-        
+
+        applyCardSurface(cardView);
         customizeInfoField(cardView);
-        
+
         return new ViewHolder(cardView);
     }
 
-    private void customizeInfoField(ImageCardView cardView) {
-        View infoField = cardView.findViewById(androidx.leanback.R.id.info_field);
-        if (infoField != null) {
-            infoField.setBackgroundColor(Color.parseColor("#80000000"));
+    /**
+     * Immich 风格卡片：深色圆角表面 + 靛蓝聚焦描边。
+     */
+    private void applyCardSurface(final ImageCardView cardView) {
+        cardView.setBackgroundResource(R.drawable.bg_card_media);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cardView.setClipToOutline(true);
+            cardView.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, Outline outline) {
+                    float radius = view.getResources().getDisplayMetrics().density * 14f;
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+                }
+            });
+
+            ImageView mainImage = cardView.getMainImageView();
+            if (mainImage != null) {
+                mainImage.setClipToOutline(true);
+                mainImage.setOutlineProvider(new ViewOutlineProvider() {
+                    @Override
+                    public void getOutline(View view, Outline outline) {
+                        float radius = view.getResources().getDisplayMetrics().density * 14f;
+                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+                    }
+                });
+            }
         }
-        
+    }
+
+    private void customizeInfoField(ImageCardView cardView) {
+        final View infoField = cardView.findViewById(androidx.leanback.R.id.info_field);
+        if (infoField != null) {
+            infoField.setBackgroundResource(R.drawable.bg_card_scrim);
+            // 静止时保持纯图片网格（Immich 风格），聚焦时才浮现日期信息
+            infoField.setVisibility(View.INVISIBLE);
+            cardView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+                @Override
+                public void onFocusChange(View v, boolean hasFocus) {
+                    infoField.setVisibility(hasFocus ? View.VISIBLE : View.INVISIBLE);
+                }
+            });
+        }
+
         TextView titleView = cardView.findViewById(androidx.leanback.R.id.title_text);
         if (titleView != null) {
-            titleView.setTextSize(10);
-            titleView.setTextColor(Color.WHITE);
+            titleView.setTextSize(12);
+            titleView.setTextColor(Color.parseColor("#FFFFFF"));
+            titleView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            titleView.setShadowLayer(6f, 0f, 1f, 0xCC000000);
         }
-        
+
         TextView contentView = cardView.findViewById(androidx.leanback.R.id.content_text);
         if (contentView != null) {
-            contentView.setTextSize(10);
-            contentView.setTextColor(Color.parseColor("#B0BEC5"));
+            contentView.setTextSize(11);
+            contentView.setTextColor(Color.parseColor("#D5DAE4"));
+            contentView.setShadowLayer(6f, 0f, 1f, 0xCC000000);
         }
     }
 

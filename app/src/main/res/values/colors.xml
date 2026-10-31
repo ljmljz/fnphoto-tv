@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Immich-inspired dark palette -->
+    <color name="ink">#0B0C0F</color>
+    <color name="ink_deep">#070809</color>
+    <color name="surface">#14161B</color>
+    <color name="surface_raised">#1B1E25</color>
+    <color name="surface_high">#232732</color>
+    <color name="outline">#2A2F3A</color>
+    <color name="outline_soft">#1F232C</color>
+
+    <color name="immich_primary">#5A6BFF</color>
+    <color name="immich_primary_dim">#4453D6</color>
+    <color name="immich_violet">#9B6BFF</color>
+    <color name="immich_primary_ghost">#335A6BFF</color>
+
+    <color name="text_primary">#EDEFF4</color>
+    <color name="text_secondary">#98A0B0</color>
+    <color name="text_tertiary">#6B7280</color>
+
+    <color name="scrim_top">#E60B0C0F</color>
+    <color name="scrim_bottom">#000B0C0F</color>
+    <color name="card_scrim_bottom">#CC000000</color>
+    <color name="card_scrim_top">#00000000</color>
+</resources>

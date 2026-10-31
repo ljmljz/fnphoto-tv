@@ -8,8 +8,8 @@ android {
         applicationId "com.fnphoto.tv"
         minSdkVersion 19
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
         
         // 启用 multidex 支持 API 19
         multiDexEnabled true

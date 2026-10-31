@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,6 +17,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.text.TextUtils;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -98,41 +101,63 @@ public class SearchActivity extends FragmentActivity {
         rootLayout.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
-        rootLayout.setBackgroundColor(Color.parseColor("#0a0a0c"));
+        rootLayout.setBackgroundColor(Color.parseColor("#0B0C0F"));
 
-        // Title
+        // 顶部标题区
         TextView tvTitle = new TextView(this);
-        tvTitle.setText("搜索照片");
-        tvTitle.setTextColor(Color.WHITE);
-        tvTitle.setTextSize(28);
-        tvTitle.setPadding(48, 32, 48, 16);
+        tvTitle.setText("搜索");
+        tvTitle.setTextColor(Color.parseColor("#F2F4F8"));
+        tvTitle.setTextSize(34);
+        tvTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        tvTitle.setLetterSpacing(0.01f);
+        tvTitle.setPadding(dp(64), dp(40), dp(64), 0);
         rootLayout.addView(tvTitle);
 
-        // Search input
+        TextView tvSubtitle = new TextView(this);
+        tvSubtitle.setText("按文件名在相册中查找");
+        tvSubtitle.setTextColor(Color.parseColor("#A8AFBF"));
+        tvSubtitle.setTextSize(14);
+        tvSubtitle.setPadding(dp(64), dp(8), dp(64), 0);
+        rootLayout.addView(tvSubtitle);
+
+        // 胶囊搜索框
         editSearch = new EditText(this);
-        editSearch.setHint("输入文件名搜索...");
-        editSearch.setTextColor(Color.WHITE);
-        editSearch.setHintTextColor(Color.parseColor("#666666"));
-        editSearch.setTextSize(20);
-        editSearch.setPadding(48, 16, 48, 16);
-        editSearch.setBackgroundColor(Color.parseColor("#1a1a1e"));
+        editSearch.setHint("输入文件名，回车确认");
+        editSearch.setTextColor(Color.parseColor("#F2F4F8"));
+        editSearch.setHintTextColor(Color.parseColor("#6E7686"));
+        editSearch.setTextSize(17);
         editSearch.setSingleLine(true);
+        editSearch.setBackgroundResource(R.drawable.bg_search_field);
+        editSearch.setPadding(dp(24), 0, dp(24), 0);
+        editSearch.setIncludeFontPadding(false);
+        editSearch.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        int searchIcon = dp(16);
+        editSearch.setCompoundDrawablesWithIntrinsicBounds(
+                android.R.drawable.ic_menu_search, 0, 0, 0);
+        editSearch.setCompoundDrawablePadding(dp(12));
+        LinearLayout.LayoutParams inputLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(56));
+        inputLp.topMargin = dp(26);
+        inputLp.leftMargin = dp(64);
+        inputLp.rightMargin = dp(64);
+        editSearch.setLayoutParams(inputLp);
         rootLayout.addView(editSearch);
 
-        // Status text
+        // 状态行
         tvStatus = new TextView(this);
         tvStatus.setText("输入关键词开始搜索");
-        tvStatus.setTextColor(Color.parseColor("#9ca3af"));
-        tvStatus.setTextSize(16);
-        tvStatus.setPadding(48, 12, 48, 8);
+        tvStatus.setTextColor(Color.parseColor("#A8AFBF"));
+        tvStatus.setTextSize(13);
+        tvStatus.setPadding(dp(72), dp(14), dp(64), dp(6));
         rootLayout.addView(tvStatus);
 
-        // Results grid
+        // 结果网格
         rvResults = new RecyclerView(this);
-        rvResults.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        rvResults.setPadding(32, 8, 32, 32);
+        LinearLayout.LayoutParams gridLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        rvResults.setLayoutParams(gridLp);
+        rvResults.setClipToPadding(false);
+        rvResults.setPadding(dp(48), dp(8), dp(48), dp(40));
         rvResults.setLayoutManager(new GridLayoutManager(this, GRID_SPAN));
 
         adapter = new SearchAdapter();
@@ -140,6 +165,35 @@ public class SearchActivity extends FragmentActivity {
         rootLayout.addView(rvResults);
 
         setContentView(rootLayout);
+
+        // 初始不弹软键盘：按 OK / 回车再唤起，避免遮挡画面
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            editSearch.setShowSoftInputOnFocus(false);
+        }
+        editSearch.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                android.view.inputmethod.InputMethodManager imm =
+                        (android.view.inputmethod.InputMethodManager)
+                                getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null && editSearch.getWindowToken() != null) {
+                    imm.hideSoftInputFromWindow(editSearch.getWindowToken(), 0);
+                }
+            }
+        }, 400);
+        editSearch.setOnClickListener(v -> showKeyboard());
+        editSearch.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                boolean isOk = keyCode == KeyEvent.KEYCODE_DPAD_CENTER
+                        || keyCode == KeyEvent.KEYCODE_ENTER;
+                if (isOk && event.getAction() == KeyEvent.ACTION_UP) {
+                    showKeyboard();
+                    return true;
+                }
+                return false;
+            }
+        });
 
         // Auto-focus search input
         editSearch.requestFocus();
@@ -165,6 +219,19 @@ public class SearchActivity extends FragmentActivity {
             @Override
             public void afterTextChanged(Editable s) {}
         });
+    }
+
+    private void showKeyboard() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            editSearch.setShowSoftInputOnFocus(true);
+        }
+        editSearch.requestFocus();
+        android.view.inputmethod.InputMethodManager imm =
+                (android.view.inputmethod.InputMethodManager)
+                        getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(editSearch, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        }
     }
 
     private void performSearch(String keyword) {
@@ -201,6 +268,10 @@ public class SearchActivity extends FragmentActivity {
                         tvStatus.setText("搜索失败: " + t.getMessage());
                     }
                 });
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     @Override
